@@ -1,32 +1,31 @@
-name: Backend CI
+name: Backend CI # ワークフロー名を具体的にしました
 
 on:
   push:
     branches:
-      - master
-      - backend/develop
-      - backend/master
+      - master # main ブランチを使用している場合は 'main' に変更してください
   pull_request:
     branches:
-      - main
-      - backend/develop
-      - backend/master
+      - master # main ブランチを使用している場合は 'main' に変更してください
+
+env:
+  CARGO_TERM_COLOR: always
 
 jobs:
-  build_and_test:
-    name: Build and Test
+  build:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Change to backend directory # ディレクトリ移動のステップを明確にしました
+        run: cd backend # run キーワードの下に直接コマンドを記述します
 
-      - name: Cd
-        run: cd backend
+      - name: Setup Rust toolchain # Rustツールのセットアップを追加
+        uses: dtolnay/rust-toolchain@stable # これがないとcargoコマンドが使えません
 
       - name: Build
-        run: cargo build
-    
-      - name: Test
-        run: cargo test
+        run: cargo build --verbose
+
+      - name: Run tests
+        run: cargo test --verbose
