@@ -1,0 +1,32 @@
+name: Backend CI
+
+on:
+  push:
+    branches:
+      - master
+      - backend/develop
+      - backend/master
+  pull_request:
+    branches:
+      - main
+      - backend/develop
+      - backend/master
+
+jobs:
+  build_and_test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Cd
+        run: cd backend
+
+      - name: Build
+        run: cargo build
+    
+      - name: Test
+        run: cargo test
