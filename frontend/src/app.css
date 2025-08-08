@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-@theme {
+:root {
 
   /* container */
   --color-base-container-default: #FFF;
