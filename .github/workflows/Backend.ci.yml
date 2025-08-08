@@ -1,0 +1,30 @@
+name: Backend CI
+
+on:
+  push:
+    branches:
+      - master # もしメインブランチが 'main' なら 'main' に変更してください
+  pull_request:
+    branches:
+      - master # もしメインブランチが 'main' なら 'main' に変更してください
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build Backend
+        run: cargo build --verbose
+        working-directory: backend # ここに working-directory を追加
+
+      - name: Run Backend tests
+        run: cargo test --verbose
+        working-directory: backend # ここにも working-directory を追加
