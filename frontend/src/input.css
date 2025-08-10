@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+@theme {
+
+  /* container */
+  --color-base-container-default: #FFF;
+  --color-base-container-primary: #18181B;
+  --color-base-container-muted: #E4E4E7;
+  --color-base-container-accent: #FAFAFA;
+  --color-base-container-subarea-accent: #F4F4F5;
+
+  /* foreground */
+  --color-base-foreground-default: #18181B;
+  --color-base-foreground-accent: #18181B;
+  --color-base-foreground-muted: #71717A;
+  --color-base-foreground-subtle: #A1A1AA;
+  --color-base-foreground-on-fill-inverse: #FAFAFA;
+  --color-base-foreground-on-fill-bright: #FAFAFA;
+  --color-base-foreground-subarea-default: #3F3F46;
+  --color-base-foreground-subarea-accent: #18181B;
+
+  /* stroke */
+  --color-base-stroke-default: #E4E4E7;
+
+  /* surface */
+  --color-base-surface-default: #FFF;
+  --color-base-surface-subarea-default: #FAFAFA;
+
+  /* function */
+  --color-destructive: #DC2626;
+  --color-destructive-on-fill: #FEF2F2;
+  --color-warning: #FBBF24;
+  --color-warning-on-fill: #18181B;
+  --color-success: #16A34A;
+  --color-success-on-fill: #F0FDF4;
+  --color-primary: #2563EB;
+  --color-primary-on-fill: #EFF6FF;
+
+}
+
+@layer theme {
+  .dark {
+
+    /* container */
+    --color-base-container-default: #09090B;
+    --color-base-container-primary: #FAFAFA;
+    --color-base-container-muted: #27272A;
+    --color-base-container-accent: #18181B;
+    --color-base-container-subarea-accent: #27272A;
+
+    /* foreground */
+    --color-base-foreground-default: #FAFAFA;
+    --color-base-foreground-accent: #FAFAFA;
+    --color-base-foreground-muted: #A1A1AA;
+    --color-base-foreground-subtle: #71717A;
+    --color-base-foreground-on-fill-inverse: #18181B;
+    --color-base-foreground-on-fill-bright: #FAFAFA;
+    --color-base-foreground-subarea-default: #F4F4F5;
+    --color-base-foreground-subarea-accent: #FAFAFA;
+
+    /* stroke */
+    --color-base-stroke-default: #3F3F46;
+
+    /* surface */
+    --color-base-surface-default: #09090B;
+    --color-base-surface-subarea-default: #18181B;
+
+    /* function */
+    --color-destructive: #B91C1C;
+    --color-destructive-on-fill: #FEF2F2;
+    --color-warning: #F59E0B;
+    --color-warning-on-fill: #18181B;
+    --color-success: #15803D;
+    --color-success-on-fill: #F0FDF4;
+    --color-primary: #1D4ED8;
+    --color-primary-on-fill: #EFF6FF;
+
+  }
+}
+
+* {
+  box-sizing: border-box;
+  font-family: "Ubuntu Sans Mono", "Noto Sans JP";
+  text-decoration: none;
+  list-style: none;
+}
+
+.container {
+  position: absolute;
+  top: 50vh;
+  left: 50vw;
+  transform: translate(-50%, -50%);
+  width: 70vw;
+}
