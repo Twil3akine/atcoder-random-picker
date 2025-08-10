@@ -1,4 +1,4 @@
-use hyper::{Body, Request, Response, StatusCode};
+use hyper::{Body, Request, Response, StatusCode, header};
 use std::convert::{From, Infallible};
 use std::collections::HashMap;
 use std::format;
@@ -32,6 +32,16 @@ fn log(now: DateTime<Local>, method: &str, path: &str, status: StatusCode) {
   );
 }
 
+fn with_cors_headers(mut res: Response<Body>) -> Response<Body> {
+  let headers = res.headers_mut();
+
+  headers.insert(header::ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
+  headers.insert(header::ACCESS_CONTROL_ALLOW_METHODS, "GET, POST, OPTIONS".parse().unwrap());
+  headers.insert(header::ACCESS_CONTROL_ALLOW_HEADERS, "Content-Type".parse().unwrap());
+
+  res
+}
+
 pub async fn router(req: Request<Body>) -> Result<Response<Body>, Infallible> {
   let now= Local::now();
 
@@ -39,6 +49,11 @@ pub async fn router(req: Request<Body>) -> Result<Response<Body>, Infallible> {
   let method = req.method().to_string();
 
   let res = match (req.method(), req.uri().path()) {
+      (&hyper::Method::OPTIONS, _) => {
+        let res = Response::new(Body::empty());
+        Ok(with_cors_headers(res))
+      }
+
       (&hyper::Method::GET, "/") => {
         let params: HashMap<String, String> = get_parameter(req).await;
         
@@ -60,13 +75,13 @@ pub async fn router(req: Request<Body>) -> Result<Response<Body>, Infallible> {
 
         let random_number = get_random_number(under, over);
         let response_body = format!("{}", random_number);
-        Ok(Response::new(Body::from(response_body)))
+        Ok(with_cors_headers(Response::new(Body::from(response_body))))
       }
       
       _ => {
         let mut not_found = Response::new(Body::from("404 Not Found"));
         *not_found.status_mut() = StatusCode::NOT_FOUND;
-        Ok(not_found)
+        Ok(with_cors_headers(not_found))
       }
   };
 
