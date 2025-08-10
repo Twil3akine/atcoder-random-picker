@@ -10,6 +10,7 @@
 - type: inputのtypeを指定できます
 - placeholder: プレースホルダーの文言を指定できます
 - isError: true の場合エラー時のスタイルを適用します
+- isErrors: それぞれに対して isErrorを適用します。
 - readonly: 指定すると読み取り専用の状態です
 - disabled: 指定するとグレーアウトされ、クリック不可になります
 
@@ -68,16 +69,26 @@
   export interface InputProps extends InputVariants, HTMLInputAttributes {
     /** クラス */
     class?: string;
+	isErrors?: Record<string, boolean>,
   }
 </script>
 
 <script lang="ts">
   let {
     isError = false,
+	isErrors = {},
     class: className = '',
     value = $bindable(''),
     ...inputAttributes
   }: InputProps = $props();
+
+  let firstErrorKey: string | null = null;
+
+  if (typeof isErrors === 'object' && isErrors !== null) {
+	firstErrorKey = Object.keys(isErrors).find(k => isErrors[k]) ?? null;
+  }
+
+  isError = isError || firstErrorKey !== null;
 
   let inputVariantClass = $derived(inputVariants({
     type: inputAttributes.type,

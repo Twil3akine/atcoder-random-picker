@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-:root {
+@theme {
 
   /* container */
   --color-base-container-default: #FFF;
@@ -76,4 +76,19 @@
     --color-primary-on-fill: #EFF6FF;
 
   }
+}
+
+* {
+  box-sizing: border-box;
+  font-family: "Ubuntu Sans Mono", "Noto Sans JP";
+  text-decoration: none;
+  list-style: none;
+}
+
+.container {
+  position: absolute;
+  top: 50vh;
+  left: 50vw;
+  transform: translate(-50%, -50%);
+  width: 70vw;
 }
