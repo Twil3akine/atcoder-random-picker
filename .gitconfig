@@ -1,0 +1,1 @@
+git config --global alias.mmerge '!f() { git merge master -m "Merge master into $(git rev-parse --abbrev-ref HEAD)"; }; f'
