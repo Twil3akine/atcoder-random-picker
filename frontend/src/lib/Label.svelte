@@ -57,6 +57,6 @@
   {@render children?.()}
 
   {#if required}
-    <span class="inline-block bg-destructive text-white text-xs leading-none px-1.5 py-0.5 ml-2">必須</span>
+    <span class="inline-block bg-destructive text-white text-3xl leading-none px-1.5 py-0.5 ml-2">必須</span>
   {/if}
 </label>

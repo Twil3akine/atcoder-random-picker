@@ -1,6 +1,8 @@
 <script lang="ts">
   import Button from "./lib/Button.svelte";
   import Input from "./lib/Input.svelte";
+  import Message from "./lib/Message.svelte";
+  import Label from "./lib/Label.svelte";
 
   let under_diff = $state<string>("0");
   let over_diff = $state<string>("0");
@@ -47,6 +49,8 @@
 
 <div class="w-full h-full">
   <div class="container flex flex-col max-w-xl w-full gap-2">
+    <h1 class="text-3xl mb-8">AtCoder Random Picker</h1>
+
     {#if errors.rangeError}
       <p class="text-destructive mb-2 text-sm">最低Diffが最高Diffを超えています。</p>
     {:else if errors.isMinusOverDiff}
@@ -59,13 +63,21 @@
       <p class="text-destructive mb-2 text-sm">{errorMessage}</p>
     {/if}
 
-    {#if result !== null}
-      <p class="text-green-600 mb-2 text-sm">サーバーからの結果: {result}</p>
-    {/if}
     <div class="flex items-center gap-2">
       <Input type="number" placeholder="最低Diffを入力してください。" isErrors={errors} bind:value={under_diff} />
       <Input type="number" placeholder="最高Diffを入力してください。" isErrors={errors} bind:value={over_diff} />
       <Button onclick={sendQuery} class="shrink-0">ボタン</Button>
     </div>
+
+    {#if result !== null}
+      <div class="mt-4">
+        <Message variant="success">
+        <div class="flex flex-col">
+          <Label class="!text-base leading-tight font-medium text-3xl mb-1.5">Success</Label>
+          <p class="text-base-foreground-default mb-2 text-sm">サーバーからの結果: {result}</p>
+        </div>
+      </Message>
+      </div>
+    {/if}
   </div>
 </div>

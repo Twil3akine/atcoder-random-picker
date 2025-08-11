@@ -25,7 +25,7 @@
   import type { Snippet } from 'svelte';
 
   export const messageVariants = cva(
-    'flex items-start gap-3 w-full p-4 border rounded-lg',
+    'flex items-start gap-3 w-full p-4 border rounded-lg text-xl',
     {
       variants: {
         /** 通知の使用用途 */
@@ -83,13 +83,13 @@
 <div class={messageVariantClass}>
   <div class={messageIconVariantClass}>
     {#if variant === "error"}
-      <CircleAlert size="1rem" />
+      <CircleAlert size="1.5rem" />
     {:else if variant === "warning"}
-      <TriangleAlert size="1rem" />
+      <TriangleAlert size="1.5rem" />
     {:else if variant === "success"}
-      <Check size="1rem" />
+      <Check size="1.5rem" />
     {:else}
-      <Info size="1rem" />
+      <Info size="1.5rem" />
     {/if}
   </div>
   {@render children?.()}
