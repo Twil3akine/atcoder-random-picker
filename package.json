@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "npm-run-all": "^4.1.5"
+  },
+  "scripts": {
+    "be": "cd backend && cargo run",
+    "fe": "cd frontend && bun run dev",
+    "tw": "cd frontend && npx @tailwindcss/cli -i ./src/input.css -o ./src/output.css --watch",
+    "dev": "npm-run-all --parallel be fe tw"
+  }
+}
