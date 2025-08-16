@@ -1,76 +1,86 @@
-#![allow(unused_comparisons)]
+#![allow(unused)]
 
-use backend::router;
+use backend::routing::{router, AppState};
+use backend::api::{Problem, ProblemModel};
 use hyper::{Body, Method, Request, StatusCode};
+use std::assert;
+use std::collections::HashMap;
+use std::sync::Arc;
 
-async fn build_and_send(method: Method, path: &str) -> (StatusCode, String) {
-	let req = Request::builder()
-		.method(method)
-		.uri(path)
-		.body(Body::empty())
-		.unwrap();
+fn build_test_state() -> Arc<AppState> {
+    let mut problem_models = HashMap::new();
+    problem_models.insert(
+        "abc001_a".to_string(),
+        ProblemModel { difficulty: Some(1000.0) },
+    );
 
-	let res = router(req).await.unwrap();
+    let problems = vec![
+        Problem {
+            id: "abc001_a".to_string(),
+            contest_id: "abc001".to_string(),
+            name: "A - Test Problem".to_string(),
+        }
+    ];
 
-	let status = res.status();
-	let body_bytes = hyper::body::to_bytes(res.into_body()).await.unwrap();
-	let body_string = String::from_utf8(body_bytes.to_vec()).unwrap();
-
-	(status, body_string)
+    Arc::new(AppState {
+        problems,
+        problem_models,
+    })
 }
 
+async fn build_and_send(method: Method, path: &str) -> (StatusCode, String) {
+    let req = Request::builder()
+        .method(method)
+        .uri(path)
+        .body(Body::empty())
+        .unwrap();
 
+    let state = build_test_state();
+    let res = router(req, state).await.unwrap();
 
+    let status = res.status();
+    let body_bytes = hyper::body::to_bytes(res.into_body()).await.unwrap();
+    let body_string = String::from_utf8(body_bytes.to_vec()).unwrap();
 
+    (status, body_string)
+}
 
 #[tokio::test]
 async fn test_not_found_path() {
-	let (status, body) = build_and_send(Method::GET, "/test").await;
-
-	assert_eq!(status, StatusCode::NOT_FOUND);
-	assert_eq!(body, "404 Not Found");
+    let (status, body) = build_and_send(Method::GET, "/test").await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    assert_eq!(body, "404 Not Found");
 }
 
 #[tokio::test]
-async fn test_calc_with_both_params() {
-    let (status, body) = build_and_send(Method::GET, "/?under=10&over=20").await;
-
-    assert_eq!(status, StatusCode::OK);
-	let random_number: u32 = body.parse().unwrap();
-    assert!(10 <= random_number && random_number <= 20);
+async fn test_not_found_problem() {
+    let (status, body) = build_and_send(Method::GET, "/?under=0&over=500").await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    assert_eq!(body, "No problem found in given range.");
 }
 
 #[tokio::test]
-async fn test_calc_without_under() {
-    let (status, body) = build_and_send(Method::GET, "/?over=5").await;
-
-    assert_eq!(status, StatusCode::OK);
-    let random_number: u32 = body.parse().unwrap();
-    assert!(0 <= random_number && random_number <= 5);
-}
-
-#[tokio::test]
-async fn test_calc_without_over() {
-    let (status, body) = build_and_send(Method::GET, "/?under=100").await;
-
-    assert_eq!(status, StatusCode::OK);
-	let random_number: u32 = body.parse().unwrap();
-    assert!(100 <= random_number && random_number <= 3854);
-}
-
-#[tokio::test]
-async fn test_calc_without_any_params() {
-    let (status, body) = build_and_send(Method::GET, "/").await;
-
-    assert_eq!(status, StatusCode::OK);
-    let random_number: u32 = body.parse().unwrap();
-    assert!(0 <= random_number && random_number <= 3854);
-}
-
-#[tokio::test]
-async fn test_calc_under_greater_than_over() {
-    let (status, body) = build_and_send(Method::GET, "/?under=50&over=10").await;
-
+async fn test_under_greater_than_over() {
+    let (status, body) = build_and_send(Method::GET, "/?under=1500&over=500").await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
     assert_eq!(body, "'under' cannot bt greater than 'over'.");
+}
+
+#[tokio::test]
+async fn test_random_range() {
+    let (status, body) = build_and_send(Method::GET, "/?under=500&over=1500").await;
+    assert_eq!(status, StatusCode::OK);
+    
+    #[derive(serde::Deserialize)]
+    struct ProblemResponse {
+        id: String,
+        contest_id: String,
+        name: String,
+        difficulty: f64,
+    }
+
+    let problem: ProblemResponse = serde_json::from_str(&body).unwrap();
+    let diff = problem.difficulty;
+
+    assert!(500.0 <= diff && diff <= 1500.0);
 }
