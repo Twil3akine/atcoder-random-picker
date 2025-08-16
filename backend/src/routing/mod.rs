@@ -1,25 +1,35 @@
 use hyper::{Body, Request, Response, StatusCode, header};
-use std::convert::{From, Infallible};
-use std::collections::HashMap;
-use std::format;
 use std::option::Option::None;
 use std::result::Result::Ok;
-use url::form_urlencoded;
+use std::{collections::HashMap};
+use std::convert::{From, Infallible};
+use std::sync::Arc;
 use chrono::{DateTime, Local};
-use rand::Rng;
+use rand;
+use rand::seq::IteratorRandom;
+use serde::Serialize;
 
-async fn get_parameter(req: Request<Body>) -> HashMap<String, String> {
-  let query = req.uri().query().unwrap_or("");
-  let params: HashMap<String, String> = form_urlencoded::parse(query.as_bytes())
-    .into_owned()
-    .collect();
+use crate::api::{Problem, ProblemModel};
 
-  params
+#[derive(Clone)]
+pub struct AppState {
+  pub problems: Vec<Problem>,
+  pub problem_models: HashMap<String, ProblemModel>,
 }
 
-fn get_random_number(under: u32, over: u32) -> u32 {
-  let mut rng = rand::thread_rng();
-  rng.gen_range(under..=over)
+#[derive(Serialize)]
+struct ProblemResponse {
+  id: String,
+  contest_id: String,
+  name: String,
+  difficulty: Option<f64>,
+}
+
+async fn get_parameter(req: &Request<Body>) -> HashMap<String, String> {
+  let query = req.uri().query().unwrap_or("");
+  url::form_urlencoded::parse(query.as_bytes())
+    .into_owned()
+    .collect()
 }
 
 fn log(now: DateTime<Local>, method: &str, path: &str, status: StatusCode) {
@@ -42,9 +52,8 @@ fn with_cors_headers(mut res: Response<Body>) -> Response<Body> {
   res
 }
 
-pub async fn router(req: Request<Body>) -> Result<Response<Body>, Infallible> {
+pub async fn router(req: Request<Body>, state: Arc<AppState>) -> Result<Response<Body>, Infallible> {
   let now= Local::now();
-
   let path = req.uri().path().to_string();
   let method = req.method().to_string();
 
@@ -55,17 +64,10 @@ pub async fn router(req: Request<Body>) -> Result<Response<Body>, Infallible> {
       }
 
       (&hyper::Method::GET, "/") => {
-        let params: HashMap<String, String> = get_parameter(req).await;
+        let params: HashMap<String, String> = get_parameter(&req).await;
         
-        let under: u32 = match params.get("under").and_then(|s| s.parse().ok()) {
-            Some(v) => v,
-            None => 0,
-        };
-
-        let over: u32 = match params.get("over").and_then(|s| s.parse().ok()) {
-            Some(v) => v,
-            None => 3854,
-        };
+        let under: f64 = params.get("under").and_then(|s| s.parse().ok()).unwrap_or(0.0);
+        let over: f64 = params.get("over").and_then(|s| s.parse().ok()).unwrap_or(3854.0);
 
         if under > over {
           let mut bad_request = Response::new(Body::from("'under' cannot bt greater than 'over'."));
@@ -73,9 +75,35 @@ pub async fn router(req: Request<Body>) -> Result<Response<Body>, Infallible> {
           return Ok(bad_request);
         }
 
-        let random_number = get_random_number(under, over);
-        let response_body = format!("{}", random_number);
-        Ok(with_cors_headers(Response::new(Body::from(response_body))))
+        let mut rng = rand::thread_rng();
+        let selected = state.problems.iter().filter_map(|p| {
+          state.problem_models.get(&p.id).and_then(|m| {
+            m.difficulty.and_then(|diff| {
+              if under <= diff && diff <= over {
+                Some(ProblemResponse {
+                  id: p.id.clone(),
+                  contest_id: p.contest_id.clone(),
+                  name: p.name.clone(),
+                  difficulty: Some(diff),
+                })
+              } else {
+                None
+              }
+            })
+          })
+        }).choose(&mut rng);
+
+        match selected {
+          Some(problem) => {
+            let body = serde_json::to_string(&problem).unwrap();
+            Ok(with_cors_headers(Response::new(Body::from(body))))
+          }
+          None => {
+            let mut not_found = Response::new(Body::from("No problem found in given range."));
+            *not_found.status_mut() = StatusCode::NOT_FOUND;
+            Ok(with_cors_headers(not_found))
+          }
+        }
       }
       
       _ => {
