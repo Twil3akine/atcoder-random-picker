@@ -5,7 +5,7 @@
   import Label from "./lib/Label.svelte";
 
   let under_diff = $state<string>("0");
-  let over_diff = $state<string>("0");
+  let over_diff = $state<string>("3854");
   
   let errors = $derived({
     rangeError: parseInt(under_diff) > parseInt(over_diff),

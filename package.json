@@ -6,7 +6,7 @@
     "be": "cd backend && cargo run",
     "fe": "cd frontend && bun run dev",
     "tw": "cd frontend && npx @tailwindcss/cli -i ./src/input.css -o ./src/output.css --watch",
-    "dev": "npm-run-all --parallel be fe tw",
+    "dev": "npm-run-all --parallel be fe",
     "log": "git log --all --graph --oneline"
   }
 }
