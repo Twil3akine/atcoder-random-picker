@@ -79,7 +79,7 @@ pub async fn router(req: Request<Body>, state: Arc<AppState>) -> Result<Response
         let selected = state.problems.iter().filter_map(|p| {
           state.problem_models.get(&p.id).and_then(|m| {
             m.difficulty.and_then(|diff| {
-              if under <= diff && diff <= over {
+              if under as i32 <= diff as i32 && diff as i32 <= over as i32 {
                 Some(ProblemResponse {
                   id: p.id.clone(),
                   contest_id: p.contest_id.clone(),
