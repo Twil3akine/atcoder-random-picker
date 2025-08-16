@@ -101,3 +101,7 @@ label {
   transform: translate(-50%, -50%);
   width: 70vw;
 }
+
+details[open] summary span {
+  transform: rotate(90deg);
+}
