@@ -1,11 +1,13 @@
 <script lang="ts">
-  import Button from "./lib/Button.svelte";
-  import Input from "./lib/Input.svelte";
-  import Message from "./lib/Message.svelte";
-  import Label from "./lib/Label.svelte";
+  import Button from "./components/Button.svelte";
+  import Input from "./components/Input.svelte";
+  import Label from "./components/Label.svelte";
+  import Message from "./components/Message.svelte";
+
+  import { type Problem } from "./utils/types";
 
   let under_diff = $state<string>("0");
-  let over_diff = $state<string>("0");
+  let over_diff = $state<string>("3854");
   
   let errors = $derived({
     rangeError: parseInt(under_diff) > parseInt(over_diff),
@@ -13,7 +15,7 @@
     isMinusOverDiff: parseInt(over_diff) < 0,
   });
 
-  let result = $state<number | null>(null);
+  let result = $state<Problem | null>(null);
   let errorMessage = $state<string | null>(null);
 
   const sendQuery = async (): Promise<void> => {
@@ -32,14 +34,8 @@
         throw new Error(`HTTPエラー: ${res.status}`);
       }
 
-      const text = await res.text();
-      const num = parseInt(text);
-
-      if (isNaN(num)) {
-        throw new Error("サーバから数値以外が返ってきました。");
-      }
-
-      result = num;
+      const json: Problem = await res.json();
+      result = json;
     } catch (err) {
       errorMessage = (err as Error).message;
       result = null;
@@ -66,18 +62,37 @@
     <div class="flex items-center gap-2">
       <Input type="number" placeholder="最低Diffを入力してください。" isErrors={errors} bind:value={under_diff} />
       <Input type="number" placeholder="最高Diffを入力してください。" isErrors={errors} bind:value={over_diff} />
-      <Button onclick={sendQuery} class="shrink-0">ボタン</Button>
+      <Button onclick={sendQuery} class="shrink-0">Pick</Button>
     </div>
 
     {#if result !== null}
-      <div class="mt-4">
-        <Message variant="success">
+    <div class="mt-4">
+      <Message variant="success">
         <div class="flex flex-col">
-          <Label class="!text-base leading-tight font-medium text-3xl mb-1.5">Success</Label>
-          <p class="text-base-foreground-default mb-2 text-sm">サーバーからの結果: {result}</p>
+          <!-- 問題記号（idの末尾）と問題名 -->
+          <Label class="leading-tight font-medium text-lg mb-1.5">
+            {result.id.split('_').slice(-1)[0].toUpperCase()} - {result.name}
+          </Label>
+
+          <!-- URL 表示 -->
+          <p class="text-base-foreground-default mb-1 text-sm">
+            URL:
+            <a 
+              class="text-blue-600 underline" 
+              href={`https://atcoder.jp/contests/${result.contest_id}/tasks/${result.id}`} 
+              target="_blank"
+            >
+              {result.id}
+            </a>
+          </p>
+
+          <!-- Diff表示 -->
+          <Button size="tiny" variant="danger" tone="ghost" class="mt-8" onclick={() => alert(`Difficulty: ${Math.floor(result!.difficulty)}`)}>
+            Show Difficulty
+          </Button>
         </div>
       </Message>
-      </div>
-    {/if}
+    </div>
+  {/if}
   </div>
 </div>

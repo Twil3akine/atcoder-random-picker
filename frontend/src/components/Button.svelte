@@ -39,6 +39,7 @@
         },
         /** ボタンのサイズ */
         size: {
+          tiny: ['w-[13.5rem] py-2 min-h-7'],
           small: ['px-3 py-2 min-h-9'],
           medium: ['px-4 py-2.5 min-h-10'],
           large: ['px-8 py-3 min-h-11'],
@@ -105,8 +106,11 @@
         {
           variant: 'danger',
           tone: 'ghost',
-          class:
-            'border border-transparent text-destructive hover:bg-base-container-accent/90 hover:border-base-container-accent/90 active:bg-base-container-accent/80 active:border-base-container-accent/80',
+          class: `
+            border border-destructive text-destructive
+            hover:bg-destructive hover:text-white
+            active:bg-destructive/80 active:text-white
+          `,
         },
         {
           isSquare: true,
