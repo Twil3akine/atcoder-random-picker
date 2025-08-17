@@ -34,10 +34,10 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/problems.json data/problem_models.json
+          git add data/problems.json data/problem-models.json
           if git diff --cached --quiet; then
             echo "No changes in JSON files"
           else
-            git commit -m "chore: update problems.json and problem_models.json"
+            git commit -m "chore: update problems.json and problem-models.json"
             git push
           fi
