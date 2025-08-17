@@ -28,7 +28,7 @@ jobs:
         run: npm install
         
       - name: Run fetch-json script
-        run: node data/fetch-json.mjs
+        run: node data/json_fetch.mjs
         
       - name: Commit changes if updated
         run: |
