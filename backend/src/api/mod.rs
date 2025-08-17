@@ -30,10 +30,10 @@ fn adjust_difficulty(difficulty: Option<i32>) -> Option<f64> {
 pub async fn fetch_problem() -> Result<(Vec<Problem>, HashMap<String, ProblemModel>), Box<dyn Error + Send + Sync>> {
     // カレントディレクトリ基準で src/data を指す
     let mut problems_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    problems_path.push("src/data/problems.json");
+    problems_path.push("../data/problems.json");
 
     let mut problem_models_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    problem_models_path.push("src/data/problem-models.json");
+    problem_models_path.push("../data/problem-models.json");
 
     // ファイル読み込み
     let problems_text = fs::read_to_string(problems_path)?;

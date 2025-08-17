@@ -1,0 +1,46 @@
+name: Update AtCoder Problems JSON
+
+on:
+  schedule:
+    # 毎週水曜 0:00 UTC（日本時間 9:00）
+    - cron: "0 0 * * 3"
+  workflow_dispatch: # 手動実行も可能
+
+permissions:
+  contents: write # push 権限が必要
+
+jobs:
+  update-json:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: data
+
+      - name: Run fetch-json script
+        run: node data/fetch-json.mjs
+        working-directory: data
+
+      - name: Commit changes if updated
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/problems.json data/problem_models.json
+          if git diff --cached --quiet; then
+            echo "No changes in JSON files"
+          else
+            git commit -m "chore: update problems.json and problem_models.json"
+            git push
+          fi
+        working-directory: data
