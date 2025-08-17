@@ -26,12 +26,10 @@ jobs:
 
       - name: Install dependencies
         run: npm install
-        working-directory: data
-
+        
       - name: Run fetch-json script
         run: node data/fetch-json.mjs
-        working-directory: data
-
+        
       - name: Commit changes if updated
         run: |
           git config user.name "github-actions[bot]"
@@ -43,4 +41,3 @@ jobs:
             git commit -m "chore: update problems.json and problem_models.json"
             git push
           fi
-        working-directory: data
