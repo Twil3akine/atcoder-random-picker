@@ -4,7 +4,9 @@
   },
   "scripts": {
     "be": "cd backend && cargo run",
+    "be-deploy": "cd backend && fly deploy",
     "fe": "cd frontend && bun run dev",
+    "fe-deploy": "cd frontend && bun run build",
     "tw": "cd frontend && npx @tailwindcss/cli -i ./src/input.css -o ./src/output.css --watch",
     "dev": "npm-run-all --parallel be fe",
     "log": "git log --all --graph --oneline"
