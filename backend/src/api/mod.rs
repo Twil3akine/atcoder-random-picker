@@ -1,6 +1,9 @@
+use std::option::Option::None;
+use std::path::PathBuf;
+use std::fs;
 use serde::Deserialize;
-use core::prelude::v1::derive;
-use std::{collections::HashMap, error::Error, fs, iter::{IntoIterator, Iterator}, option::Option::{self, None, Some}, path::PathBuf, string::String, vec::Vec};
+use std::collections::HashMap;
+use std::error::Error;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Problem {
@@ -28,12 +31,19 @@ fn adjust_difficulty(difficulty: Option<i32>) -> Option<f64> {
 }
 
 pub async fn fetch_problem() -> Result<(Vec<Problem>, HashMap<String, ProblemModel>), Box<dyn Error + Send + Sync>> {
-    // カレントディレクトリ基準で src/data を指す
-    let mut problems_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    problems_path.push("../data/problems.json");
+    // コンテナ内のパスを直接指定
+    let problems_path = PathBuf::from("/app/data/problems.json");
+    let problem_models_path = PathBuf::from("/app/data/problem-models.json");
 
-    let mut problem_models_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    problem_models_path.push("../data/problem-models.json");
+    // ファイルが存在しない場合に落ちないようにする
+    if !problems_path.exists() {
+        eprintln!("Warning: {} not found", problems_path.display());
+        return Ok((Vec::new(), HashMap::new()));
+    }
+    if !problem_models_path.exists() {
+        eprintln!("Warning: {} not found", problem_models_path.display());
+        return Ok((Vec::new(), HashMap::new()));
+    }
 
     // ファイル読み込み
     let problems_text = fs::read_to_string(problems_path)?;
@@ -42,7 +52,6 @@ pub async fn fetch_problem() -> Result<(Vec<Problem>, HashMap<String, ProblemMod
     let problem_models_text = fs::read_to_string(problem_models_path)?;
     let raw_models: HashMap<String, ProblemModelRaw> = serde_json::from_str(&problem_models_text)?;
 
-    // 補正式を適用させる
     let problem_models: HashMap<String, ProblemModel> = raw_models
         .into_iter()
         .map(|(id, raw)| {
