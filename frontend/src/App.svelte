@@ -50,9 +50,9 @@
     {#if errors.rangeError}
       <p class="text-destructive mb-2 text-sm">最低Diffが最高Diffを超えています。</p>
     {:else if errors.isMinusOverDiff}
-      <p class="text-destructive mb-2 text-sm">最低Diffが負の値になっています。</p>
+      <p class="text-destructive mb-2 text-sm">最高Diffが負の値になっています。</p>
     {:else if errors.isMinusUnderDiff}
-      <p class="text-destructive mb-2 text-sm">最高Diffが負の値になっています</p>
+      <p class="text-destructive mb-2 text-sm">最低Diffが負の値になっています</p>
     {/if}
 
     {#if errorMessage}
