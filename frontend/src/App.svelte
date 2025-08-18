@@ -26,8 +26,9 @@
     errorMessage = null;
 
     try {
+      const API_URL = import.meta.env.VITE_API_URL;
       const res = await fetch(
-        `http://127.0.0.1:3000/?under=${under_diff}&over=${over_diff}`
+        `${API_URL}/?under=${under_diff}&over=${over_diff}`
       );
 
       if (!res.ok) {
