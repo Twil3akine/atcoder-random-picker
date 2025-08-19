@@ -4,6 +4,7 @@
   import Label from "./components/Label.svelte";
   import Message from "./components/Message.svelte";
 
+  import { Loader } from "@lucide/svelte";
   import { type Problem } from "./utils/types";
 
   let under_diff = $state<string>("0");
@@ -17,6 +18,7 @@
 
   let result = $state<Problem | null>(null);
   let errorMessage = $state<string | null>(null);
+  let loading = $state<boolean>(false);
 
   const sendQuery = async (): Promise<void> => {
     if (errors.rangeError || errors.isMinusUnderDiff || errors.isMinusOverDiff) {
@@ -24,6 +26,7 @@
     }
 
     errorMessage = null;
+    loading = true;
 
     try {
       const API_URL = import.meta.env.VITE_API_URL;
@@ -41,6 +44,10 @@
       errorMessage = (err as Error).message;
       result = null;
     }
+
+    setTimeout(() => {
+      loading = false;
+    }, 2200);
   }
 </script>
 
@@ -63,10 +70,17 @@
     <div class="flex items-center gap-2">
       <Input type="number" placeholder="最低Diffを入力してください。" isErrors={errors} bind:value={under_diff} />
       <Input type="number" placeholder="最高Diffを入力してください。" isErrors={errors} bind:value={over_diff} />
-      <Button onclick={sendQuery} class="shrink-0">Pick</Button>
+      <Button onclick={sendQuery} class="shrink-0" disabled={loading}>
+        {#if loading}
+          <div class="animate-spin [animation-duration: 2.2s] mr-2">
+            <Loader size="1rem" />
+          </div>
+        {/if}
+        Pick
+      </Button>
     </div>
 
-    {#if result !== null}
+    {#if !loading && result !== null}
     <div class="mt-4">
       <Message variant="success">
         <div class="flex flex-col">
