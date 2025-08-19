@@ -1,7 +1,7 @@
 #![allow(unused)]
 
-use backend::routing::{router, AppState};
-use backend::api::{Problem, ProblemModel};
+use backend::utils::routing::{router, AppState};
+use backend::utils::api::{Problem, ProblemModel};
 use hyper::{Body, Method, Request, StatusCode};
 use std::assert;
 use std::collections::HashMap;

@@ -1,4 +1,4 @@
-use backend::api::{Problem, ProblemModel};
+use backend::utils::api::{Problem, ProblemModel};
 use std::collections::HashMap;
 
 /// fetch_problem のモック版
