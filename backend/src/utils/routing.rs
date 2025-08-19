@@ -9,7 +9,7 @@ use rand;
 use rand::seq::IteratorRandom;
 use serde::Serialize;
 
-use crate::api::{Problem, ProblemModel};
+use crate::utils::api::{Problem, ProblemModel};
 
 #[derive(Clone)]
 pub struct AppState {
