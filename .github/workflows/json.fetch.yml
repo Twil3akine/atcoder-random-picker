@@ -27,16 +27,16 @@ jobs:
       - name: Install dependencies
         run: npm install
         working-directory: backend/data
-        
+
       - name: Run fetch-json script
         run: node json_fetch.mjs
         working-directory: backend/data
-        
+
       - name: Commit changes if updated
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/problems.json data/problem-models.json
+          git add problems.json problem-models.json
           if git diff --cached --quiet; then
             echo "No changes in JSON files"
           else
