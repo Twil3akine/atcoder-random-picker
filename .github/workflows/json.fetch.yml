@@ -26,11 +26,11 @@ jobs:
 
       - name: Install dependencies
         run: npm install
-        working-directory: backend/src/data
+        working-directory: backend/data
         
       - name: Run fetch-json script
         run: node data/json_fetch.mjs
-        working-directory: backend/src/data
+        working-directory: backend/data
         
       - name: Commit changes if updated
         run: |
@@ -43,4 +43,4 @@ jobs:
             git commit -m "chore: update problems.json and problem-models.json"
             git push
           fi
-        working-directory: backend/src/data
+        working-directory: backend/data
