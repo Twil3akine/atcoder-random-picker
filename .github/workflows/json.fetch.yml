@@ -29,7 +29,7 @@ jobs:
         working-directory: backend/data
         
       - name: Run fetch-json script
-        run: node data/json_fetch.mjs
+        run: node json_fetch.mjs
         working-directory: backend/data
         
       - name: Commit changes if updated
