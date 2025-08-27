@@ -14,13 +14,11 @@ fn build_test_state() -> Arc<AppState> {
         ProblemModel { difficulty: Some(1000.0) },
     );
 
-    let problems = vec![
-        Problem {
-            id: "abc001_a".to_string(),
-            contest_id: "abc001".to_string(),
-            name: "A - Test Problem".to_string(),
-        }
-    ];
+    let problems = vec![Problem {
+        id: "abc001_a".to_string(),
+        contest_id: "abc001".to_string(),
+        name: "A - Test Problem".to_string(),
+    }];
 
     Arc::new(AppState {
         problems,
@@ -56,7 +54,14 @@ async fn test_not_found_path() {
 async fn test_not_found_problem() {
     let (status, body) = build_and_send(Method::GET, "/?under=0&over=500").await;
     assert_eq!(status, StatusCode::NOT_FOUND);
-    assert_eq!(body, "No problem found in given range.");
+
+    #[derive(serde::Deserialize)]
+    struct ErrorResponse {
+        message: String,
+    }
+
+    let err: ErrorResponse = serde_json::from_str(&body).unwrap();
+    assert_eq!(err.message, "指定Diff範囲に該当する問題がありませんでした");
 }
 
 #[tokio::test]
@@ -70,7 +75,7 @@ async fn test_under_greater_than_over() {
 async fn test_random_range() {
     let (status, body) = build_and_send(Method::GET, "/?under=500&over=1500").await;
     assert_eq!(status, StatusCode::OK);
-    
+
     #[derive(serde::Deserialize)]
     struct ProblemResponse {
         id: String,
