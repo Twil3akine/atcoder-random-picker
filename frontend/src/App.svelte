@@ -39,15 +39,18 @@
       }
 
       const json: Problem = await res.json();
-      result = json;
+      
+      setTimeout(() => {
+        result = json;
+        loading = false;
+      }, 1050);
     } catch (err) {
-      errorMessage = (err as Error).message;
-      result = null;
+      setTimeout(() => {
+        errorMessage = (err as Error).message;
+        result = null;
+        loading = false;
+      }, 1050);
     }
-
-    setTimeout(() => {
-      loading = false;
-    }, 2200);
   }
 </script>
 
@@ -70,13 +73,14 @@
     <div class="flex items-center gap-2">
       <Input type="number" placeholder="最低Diffを入力してください。" isErrors={errors} bind:value={under_diff} />
       <Input type="number" placeholder="最高Diffを入力してください。" isErrors={errors} bind:value={over_diff} />
-      <Button onclick={sendQuery} class="shrink-0" disabled={loading}>
+      <Button onclick={sendQuery} class="shrink-0 w-24 h-12 flex justify-center items-center" disabled={loading}>
         {#if loading}
-          <div class="animate-spin [animation-duration: 2.2s] mr-2">
-            <Loader size="1rem" />
+          <div class="animate-spin [animation-duration: 1.05s]">
+            <Loader size="1.5rem" />
           </div>
+        {:else}
+          Pick
         {/if}
-        Pick
       </Button>
     </div>
 
