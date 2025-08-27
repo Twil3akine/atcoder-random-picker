@@ -34,6 +34,11 @@
         `${API_URL}/?under=${under_diff}&over=${over_diff}`
       );
 
+      if (res.status === 404) {
+        const data = await res.json();
+        throw new Error(data.message ?? "指定範囲内に該当する問題がありませんでした");
+      }
+
       if (!res.ok) {
         throw new Error(`HTTPエラー: ${res.status}`);
       }
@@ -64,10 +69,6 @@
       <p class="text-destructive mb-2 text-sm">最高Diffが負の値になっています。</p>
     {:else if errors.isMinusUnderDiff}
       <p class="text-destructive mb-2 text-sm">最低Diffが負の値になっています</p>
-    {/if}
-
-    {#if errorMessage}
-      <p class="text-destructive mb-2 text-sm">{errorMessage}</p>
     {/if}
 
     <div class="flex items-center gap-2">
@@ -109,6 +110,20 @@
           <Button size="tiny" variant="danger" tone="ghost" class="mt-8" onclick={() => alert(`Difficulty: ${Math.floor(result!.difficulty)}`)}>
             Show Difficulty
           </Button>
+        </div>
+      </Message>
+    </div>
+  {:else if errorMessage}
+    <div class="mt-4">
+      <Message variant="error">
+        <div class="flex flex-col">
+          <Label class="leading-tight font-medium text-lg mb-1.5">
+            Failed Picking...
+          </Label>
+
+          <p class="text-base-foreground-default mb-1 text-sm">
+            {errorMessage}
+          </p>
         </div>
       </Message>
     </div>
