@@ -1,11 +1,12 @@
 use hyper::{Body, Request, Response, StatusCode, header};
+use core::prelude::v1::derive;
 use std::option::Option::None;
 use std::result::Result::Ok;
+use std::string::ToString;
 use std::{collections::HashMap};
 use std::convert::{From, Infallible};
 use std::sync::Arc;
 use chrono::{DateTime, Local};
-use rand;
 use rand::seq::IteratorRandom;
 use serde::Serialize;
 
@@ -23,6 +24,11 @@ struct ProblemResponse {
   contest_id: String,
   name: String,
   difficulty: Option<f64>,
+}
+
+#[derive(Serialize)]
+struct ErrorResponse {
+  message: String,
 }
 
 async fn get_parameter(req: &Request<Body>) -> HashMap<String, String> {
@@ -99,8 +105,14 @@ pub async fn router(req: Request<Body>, state: Arc<AppState>) -> Result<Response
             Ok(with_cors_headers(Response::new(Body::from(body))))
           }
           None => {
-            let mut not_found = Response::new(Body::from("No problem found in given range."));
+            let error_body = serde_json::to_string(&ErrorResponse {
+              message: "指定Diff範囲に該当する問題がありませんでした".to_string(),
+            }).unwrap();
+
+            let mut not_found = Response::new(Body::from(error_body));
             *not_found.status_mut() = StatusCode::NOT_FOUND;
+            not_found.headers_mut().insert(header::CONTENT_TYPE, "application/json".parse().unwrap());
+
             Ok(with_cors_headers(not_found))
           }
         }
