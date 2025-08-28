@@ -77,11 +77,7 @@
     <div class="flex items-center gap-2">
       <Input type="number" placeholder="最低Diffを入力してください。" isErrors={errors} bind:value={under_diff} />
       <Input type="number" placeholder="最高Diffを入力してください。" isErrors={errors} bind:value={over_diff} />
-<<<<<<< HEAD
-      <Button onclick={()=>{sendQuery(); recordLastInput({under: parseInt(under_diff), over: parseInt(over_diff)});}} class="shrink-0" disabled={loading}>
-=======
       <Button onclick={sendQuery} class="shrink-0 w-24 h-12 flex justify-center items-center" disabled={loading}>
->>>>>>> f61be8f42e20876c0b55769a710a2933d1be6a58
         {#if loading}
           <div class="animate-spin [animation-duration: 1.05s]">
             <Loader size="1.5rem" />
