@@ -6,8 +6,11 @@
 
   import { Loader } from "@lucide/svelte";
   import { type Problem } from "./utils/types";
+  import { recordLastInput, loadLastInput, DiffRange } from "./memorizer";
 
-  let under_diff = $state<string>("0");
+  let lastRange : DiffRange | null = loadLastInput();
+
+  let under_diff = $state<string>(lastRange ? lastRange.under.toString():"0");
   let over_diff = $state<string>("3854");
   
   let errors = $derived({
@@ -70,7 +73,7 @@
     <div class="flex items-center gap-2">
       <Input type="number" placeholder="最低Diffを入力してください。" isErrors={errors} bind:value={under_diff} />
       <Input type="number" placeholder="最高Diffを入力してください。" isErrors={errors} bind:value={over_diff} />
-      <Button onclick={sendQuery} class="shrink-0" disabled={loading}>
+      <Button onclick={()=>{sendQuery(); recordLastInput({under: parseInt(under_diff), over: parseInt(over_diff)});}} class="shrink-0" disabled={loading}>
         {#if loading}
           <div class="animate-spin [animation-duration: 2.2s] mr-2">
             <Loader size="1rem" />
