@@ -8,14 +8,14 @@
   import { type Problem, type ClosedRange, createValidRange } from "./utils/types";
   import { cacheInput, loadLastInput } from "./cacher";
 
-  const MinDiff:number = 0;
-  const MaxDiff:number = 3854;
+  const MIN_DIFF: number = 0;
+  const MAX_DIFF: number = 3854;
 
   let cachedInput : ClosedRange | null = loadLastInput();
   let currentInput : ClosedRange | null;
 
-  let under_diff = $state<number>(cachedInput ? cachedInput.min : MinDiff);
-  let over_diff = $state<number>(cachedInput ? cachedInput.max : MaxDiff);
+  let under_diff = $state<number>(cachedInput ? cachedInput.min : MIN_DIFF);
+  let over_diff = $state<number>(cachedInput ? cachedInput.max : MAX_DIFF);
   
   let errors = $derived({
     rangeError: !(currentInput = createValidRange(under_diff, over_diff)),
