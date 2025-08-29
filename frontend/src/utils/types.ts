@@ -11,12 +11,6 @@ export type ClosedRange = {
 } & { readonly __brand: unique symbol }; 
 
 // for validation
-export function createValidRange(min: number, max: number): ClosedRange | null {
-  if (min > max) return null;
-  
-  return {
-    min,
-    max,
-    __brand: Symbol('ClosedRange') as never
-  };
+export const createValidRange = (min: number, max: number): ClosedRange | null => {
+  return min>max ? null : {min, max, __brand: Symbol('ClosedRange') as never};
 }

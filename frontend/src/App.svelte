@@ -8,20 +8,19 @@
   import { type Problem, type ClosedRange, createValidRange } from "./utils/types";
   import { cacheInput, loadLastInput } from "./cacher";
 
-  const maxDiff = 3854;
-  const minDiff = 0;
+  const MinDiff:number = 0;
+  const MaxDiff:number = 3854;
 
   let cachedInput : ClosedRange | null = loadLastInput();
   let currentInput : ClosedRange | null;
 
-  let under_diff = $state<number>(cachedInput ? cachedInput.min : minDiff);
-  let over_diff = $state<number>(cachedInput ? cachedInput.max : maxDiff);
+  let under_diff = $state<number>(cachedInput ? cachedInput.min : MinDiff);
+  let over_diff = $state<number>(cachedInput ? cachedInput.max : MaxDiff);
   
   let errors = $derived({
-    rangeError: under_diff > over_diff,
+    rangeError: !(currentInput = createValidRange(under_diff, over_diff)),
     isMinusUnderDiff: under_diff < 0,
     isMinusOverDiff: over_diff < 0,
-    invalidRange: !(currentInput = createValidRange(under_diff, over_diff))
   });
 
   let result = $state<Problem | null>(null);
@@ -77,8 +76,6 @@
       <p class="text-destructive mb-2 text-sm">最高Diffが負の値になっています。</p>
     {:else if errors.isMinusUnderDiff}
       <p class="text-destructive mb-2 text-sm">最低Diffが負の値になっています</p>
-    {:else if errors.invalidRange}
-      <p class="text-destructive mb-2 text-sm">不正なDiff範囲になっています。</p>
     {/if}
 
     <div class="flex items-center gap-2">
