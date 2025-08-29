@@ -5,15 +5,22 @@
   import Message from "./components/Message.svelte";
 
   import { Loader } from "@lucide/svelte";
-  import { type Problem } from "./utils/types";
+  import { type Problem, type ClosedRange, createValidRange } from "./utils/types";
+  import { cacheInput, loadLastInput } from "./cacher";
 
-  let under_diff = $state<string>("0");
-  let over_diff = $state<string>("3854");
+  const MIN_DIFF: number = 0;
+  const MAX_DIFF: number = 3854;
+
+  let cachedInput : ClosedRange | null = loadLastInput();
+  let currentInput : ClosedRange | null;
+
+  let under_diff = $state<number>(cachedInput ? cachedInput.min : MIN_DIFF);
+  let over_diff = $state<number>(cachedInput ? cachedInput.max : MAX_DIFF);
   
   let errors = $derived({
-    rangeError: parseInt(under_diff) > parseInt(over_diff),
-    isMinusUnderDiff: parseInt(under_diff) < 0,
-    isMinusOverDiff: parseInt(over_diff) < 0,
+    rangeError: !(currentInput = createValidRange(under_diff, over_diff)),
+    isMinusUnderDiff: under_diff < 0,
+    isMinusOverDiff: over_diff < 0,
   });
 
   let result = $state<Problem | null>(null);
@@ -74,7 +81,7 @@
     <div class="flex items-center gap-2">
       <Input type="number" placeholder="最低Diffを入力してください。" isErrors={errors} bind:value={under_diff} />
       <Input type="number" placeholder="最高Diffを入力してください。" isErrors={errors} bind:value={over_diff} />
-      <Button onclick={sendQuery} class="shrink-0 w-24 h-12 flex justify-center items-center" disabled={loading}>
+       <Button onclick={() =>{sendQuery(), cacheInput(currentInput!)}} class="shrink-0 w-24 h-12 flex justify-center items-center" disabled={loading}>
         {#if loading}
           <div class="animate-spin [animation-duration: 1.05s]">
             <Loader size="1.5rem" />
