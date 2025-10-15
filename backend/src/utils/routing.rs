@@ -1,8 +1,10 @@
 use hyper::{Body, Request, Response, StatusCode, header};
 use core::prelude::v1::derive;
+use std::iter::Iterator;
 use std::option::Option::None;
 use std::result::Result::Ok;
-use std::string::ToString;
+use std::string::{String, ToString};
+use std::vec::Vec;
 use std::{collections::HashMap};
 use std::convert::{From, Infallible};
 use std::sync::Arc;
@@ -16,6 +18,28 @@ use crate::utils::api::{Problem, ProblemModel};
 pub struct AppState {
   pub problems: Vec<Problem>,
   pub problem_models: HashMap<String, ProblemModel>,
+}
+
+#[derive(Serialize)]
+enum Contest {
+  ABC,
+  ARC,
+  AGC,
+  Other(String),
+}
+
+impl Contest {
+  fn from_id(id: &str) -> Self {
+    if id.starts_with("abc") {
+      Contest::ABC
+    } else if id.starts_with("arc") {
+      Contest::ARC
+    } else if id.starts_with("agc") {
+      Contest::AGC
+    } else {
+      Contest::Other(id.to_string())
+    }
+  }
 }
 
 #[derive(Serialize)]
@@ -75,6 +99,15 @@ pub async fn router(req: Request<Body>, state: Arc<AppState>) -> Result<Response
         let under: f64 = params.get("under").and_then(|s| s.parse().ok()).unwrap_or(0.0);
         let over: f64 = params.get("over").and_then(|s| s.parse().ok()).unwrap_or(3854.0);
 
+        let contest_filters: Vec<Contest> = params
+          .get("contest")
+          .map(|s| {
+            s.split(',')
+              .map(|id| Contest::from_id(id.trim()))
+              .collect::<Vec<Contest>>()
+          })
+          .unwrap_or_default();
+
         if under > over {
           let mut bad_request = Response::new(Body::from("'under' cannot bt greater than 'over'."));
           *bad_request.status_mut() = StatusCode::BAD_REQUEST;
@@ -82,22 +115,37 @@ pub async fn router(req: Request<Body>, state: Arc<AppState>) -> Result<Response
         }
 
         let mut rng = rand::thread_rng();
-        let selected = state.problems.iter().filter_map(|p| {
-          state.problem_models.get(&p.id).and_then(|m| {
-            m.difficulty.and_then(|diff| {
-              if under as i32 <= diff as i32 && diff as i32 <= over as i32 {
-                Some(ProblemResponse {
-                  id: p.id.clone(),
-                  contest_id: p.contest_id.clone(),
-                  name: p.name.clone(),
-                  difficulty: Some(diff),
-                })
-              } else {
-                None
-              }
+
+        let selected = state.problems
+          .iter()
+          .filter(|p| {
+            if contest_filters.is_empty() {
+              return true;
+            }
+            contest_filters.iter().any(|filter| match filter {
+              Contest::ABC => p.contest_id.starts_with("abc"),
+              Contest::ARC => p.contest_id.starts_with("arc"),
+              Contest::AGC => p.contest_id.starts_with("agc"),
+              Contest::Other(s) => p.contest_id.starts_with(s),
             })
           })
-        }).choose(&mut rng);
+          .filter_map(|p| {
+            state.problem_models.get(&p.id).and_then(|m| {
+              m.difficulty.and_then(|diff| {
+                if under <= diff && diff <= over {
+                  Some(ProblemResponse {
+                    id: p.id.clone(),
+                    contest_id: p.contest_id.clone(),
+                    name: p.name.clone(),
+                    difficulty: Some(diff),
+                  })
+                } else {
+                  None
+                }
+              })
+            })
+          })
+          .choose(&mut rng);
 
         match selected {
           Some(problem) => {
