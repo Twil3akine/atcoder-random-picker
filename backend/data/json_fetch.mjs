@@ -6,7 +6,7 @@ const UA = "Mozilla/5.0 (atrp-updater; +https://example.com)";
 
 const endpoints = [
   ["problems.json", "https://kenkoooo.com/atcoder/resources/problems.json"],
-  ["problem_models.json", "https://kenkoooo.com/atcoder/resources/problem-models.json"],
+  ["problem-models.json", "https://kenkoooo.com/atcoder/resources/problem-models.json"],
 ];
 
 async function ensureDir(dir) {
