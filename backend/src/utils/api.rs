@@ -1,6 +1,7 @@
 use std::option::Option::None;
 use std::path::PathBuf;
-use std::fs;
+use std::string::ToString;
+use std::{env, fs};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::error::Error;
@@ -31,9 +32,12 @@ fn adjust_difficulty(difficulty: Option<i32>) -> Option<f64> {
 }
 
 pub async fn fetch_problem() -> Result<(Vec<Problem>, HashMap<String, ProblemModel>), Box<dyn Error + Send + Sync>> {
-    // コンテナ内のパスを直接指定
-    let problems_path = PathBuf::from("/app/data/problems.json");
-    let problem_models_path = PathBuf::from("/app/data/problem-models.json");
+    let data_dir = env::var("DATA_DIR").unwrap_or_else(|_| "data".to_string());
+    
+    let base_path = PathBuf::from(data_dir);
+
+    let problems_path = base_path.join("problems.json");
+    let problem_models_path = base_path.join("problem-models.json");
 
     // ファイルが存在しない場合に落ちないようにする
     if !problems_path.exists() {
