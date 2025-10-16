@@ -96,8 +96,8 @@ pub async fn router(req: Request<Body>, state: Arc<AppState>) -> Result<Response
       (&hyper::Method::GET, "/") => {
         let params: HashMap<String, String> = get_parameter(&req).await;
         
-        let under: f64 = params.get("under").and_then(|s| s.parse().ok()).unwrap_or(0.0);
-        let over: f64 = params.get("over").and_then(|s| s.parse().ok()).unwrap_or(3854.0);
+        let min: f64 = params.get("min").and_then(|s| s.parse().ok()).unwrap_or(0.0);
+        let max: f64 = params.get("max").and_then(|s| s.parse().ok()).unwrap_or(3854.0);
 
         let contest_filters: Vec<Contest> = params
           .get("contest")
@@ -108,8 +108,8 @@ pub async fn router(req: Request<Body>, state: Arc<AppState>) -> Result<Response
           })
           .unwrap_or_default();
 
-        if under > over {
-          let mut bad_request = Response::new(Body::from("'under' cannot bt greater than 'over'."));
+        if min > max {
+          let mut bad_request = Response::new(Body::from("'min' cannot bt greater than 'max'."));
           *bad_request.status_mut() = StatusCode::BAD_REQUEST;
           return Ok(bad_request);
         }
@@ -132,7 +132,7 @@ pub async fn router(req: Request<Body>, state: Arc<AppState>) -> Result<Response
           .filter_map(|p| {
             state.problem_models.get(&p.id).and_then(|m| {
               m.difficulty.and_then(|diff| {
-                if under <= diff && diff <= over {
+                if min <= diff && diff <= max {
                   Some(ProblemResponse {
                     id: p.id.clone(),
                     contest_id: p.contest_id.clone(),

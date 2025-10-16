@@ -1,6 +1,6 @@
 # AtCoder Random Picker 🚀
 
-AtCoder Random Pickerは、AtCoder の未解決または未提出問題の中から、指定した難易度範囲に合致する問題をランダムで提示する Web サービスです。  
+AtCoder Random Pickerは、AtCoder の問題の中から、指定した難易度範囲に合致する問題をランダムで提示する Web サービスです。  
 
 ---
 
@@ -19,7 +19,7 @@ AtCoder Random Pickerは、AtCoder の未解決または未提出問題の中か
    - 最低 Diff は 0 以上、最高 Diff は最低 Diff 以上で入力してください
 2. **「Pick」ボタンを押す**
    - ボタンを押すと問題をランダム取得
-   - 押した直後は 2 秒間ボタンが無効化され、ロード中アイコンが回転します
+   - 押した直後は約 1 秒間ボタンが無効化され、ロード中アイコンが回転します
 3. **問題が表示される**
    - 問題記号・名前・URL が表示
    - 「Show Difficulty」ボタンで問題の Diff を確認可能
@@ -49,7 +49,7 @@ AtCoder Random Pickerは、AtCoder の未解決または未提出問題の中か
 ## 開発者向け情報
 
 - API: GET `/`  
-  - クエリ: `?under=<最低Diff>&over=<最高Diff>`  
+  - クエリ: `?min=<最低Diff>&max=<最高Diff>`  
   - レスポンス: JSON 形式で問題情報 (`Problem` 型)
 - フロント側は `loading` 状態管理でボタン押下後の UI を制御
 - レート制限は IP ごとに 1 秒 1 リクエスト

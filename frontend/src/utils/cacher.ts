@@ -1,4 +1,4 @@
-import type { ClosedRange } from './utils/types';
+import type { ClosedRange } from './types';
 
 const rangeKey : string = 'lastDiff';
 

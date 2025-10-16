@@ -52,7 +52,7 @@ async fn test_not_found_path() {
 
 #[tokio::test]
 async fn test_not_found_problem() {
-    let (status, body) = build_and_send(Method::GET, "/?under=0&over=500").await;
+    let (status, body) = build_and_send(Method::GET, "/?min=0&max=500").await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 
     #[derive(serde::Deserialize)]
@@ -65,15 +65,15 @@ async fn test_not_found_problem() {
 }
 
 #[tokio::test]
-async fn test_under_greater_than_over() {
-    let (status, body) = build_and_send(Method::GET, "/?under=1500&over=500").await;
+async fn test_min_greater_than_max() {
+    let (status, body) = build_and_send(Method::GET, "/?min=1500&max=500").await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
-    assert_eq!(body, "'under' cannot bt greater than 'over'.");
+    assert_eq!(body, "'min' cannot bt greater than 'max'.");
 }
 
 #[tokio::test]
 async fn test_random_range() {
-    let (status, body) = build_and_send(Method::GET, "/?under=500&over=1500").await;
+    let (status, body) = build_and_send(Method::GET, "/?min=500&max=1500").await;
     assert_eq!(status, StatusCode::OK);
 
     #[derive(serde::Deserialize)]
