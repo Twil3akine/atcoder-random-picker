@@ -23,10 +23,34 @@ async function download([filename, url]) {
     throw new Error(`HTTP ${res.status} for ${url}`);
   }
 
-  const arrBuf = await res.arrayBuffer();
-  const buf = Buffer.from(arrBuf);
+  // レスポンスをJSONとしてパース
+  const data = await res.json();
+  let processedData;
+
+  // ファイル名に応じて必要なフィールドのみを抽出
+  if (filename === "problems.json") {
+    processedData = data.map(({ id, contest_id, name }) => ({
+      id,
+      contest_id,
+      name,
+    }));
+  } else if (filename === "problem-models.json") {
+    processedData = Object.fromEntries(
+      Object.entries(data)
+        // difficultyが存在するエントリのみに絞り込む
+        .filter(([, model]) => model.difficulty !== undefined && model.difficulty !== null)
+        // { difficulty: value } という形式の新しいオブジェクトを作成する
+        .map(([id, model]) => [id, { difficulty: model.difficulty }])
+    );
+  } else {
+    // 上記以外のファイルはそのまま保存（念のため）
+    processedData = data;
+  }
+
+  // 抽出後のデータをJSON文字列に変換してBuffer化
+  const buf = Buffer.from(JSON.stringify(processedData));
   await writeFile(`${DATA_DIR}/${filename}`, buf);
-  console.log(`Saved: ${DATA_DIR}/${filename}`);
+  console.log(`Saved (processed): ${DATA_DIR}/${filename}`);
 }
 
 (async () => {
