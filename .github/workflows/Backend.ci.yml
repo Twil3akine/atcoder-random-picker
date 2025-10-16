@@ -3,10 +3,10 @@ name: Backend CI
 on:
   push:
     branches:
-      - master # もしメインブランチが 'main' なら 'main' に変更してください
+      - master
   pull_request:
     branches:
-      - master # もしメインブランチが 'main' なら 'main' に変更してください
+      - master
 
 env:
   CARGO_TERM_COLOR: always
@@ -23,8 +23,8 @@ jobs:
 
       - name: Build Backend
         run: cargo build --verbose
-        working-directory: backend # ここに working-directory を追加
+        working-directory: backend
 
       - name: Run Backend tests
         run: cargo test --verbose
-        working-directory: backend # ここにも working-directory を追加
+        working-directory: backend

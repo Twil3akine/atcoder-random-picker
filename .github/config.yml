@@ -1,0 +1,12 @@
+repository:
+  name: atcoder-random-picker
+  owner: Twil3akine
+
+templates:
+  issue:
+    enabled: true
+  pull_request:
+    enabled: true
+
+settings:
+  default_branch: main
