@@ -6,7 +6,7 @@
 
   import { Loader } from "@lucide/svelte";
   import { type Problem, type ClosedRange, createValidRange } from "./utils/types";
-  import { cacheInput, loadLastInput } from "./cacher";
+  import { cacheInput, loadLastInput } from "./utils/cacher";
 
   const MIN_DIFF: number = 0;
   const MAX_DIFF: number = 3854;
@@ -14,21 +14,28 @@
   let cachedInput : ClosedRange | null = loadLastInput();
   let currentInput : ClosedRange | null;
 
-  let under_diff = $state<number>(cachedInput ? cachedInput.min : MIN_DIFF);
-  let over_diff = $state<number>(cachedInput ? cachedInput.max : MAX_DIFF);
+  let min_diff = $state<number>(cachedInput ? cachedInput.min : MIN_DIFF);
+  let max_diff = $state<number>(cachedInput ? cachedInput.max : MAX_DIFF);
   
+  /*
+	 * バリデーションチェック
+	 * rangeError: Max条件がMin条件未満になっていないか
+	 * isMinusMinDiff: Min条件が負の数になっていないか
+	 * isMinusMaxDiff: Max条件が負の数になっていないか
+	 */
   let errors = $derived({
-    rangeError: !(currentInput = createValidRange(under_diff, over_diff)),
-    isMinusUnderDiff: under_diff < 0,
-    isMinusOverDiff: over_diff < 0,
+    rangeError: !(currentInput = createValidRange(min_diff, max_diff)),
+    isMinusMinDiff: min_diff < 0,
+    isMinusMaxDiff: max_diff < 0,
   });
 
-  let result = $state<Problem | null>(null);
-  let errorMessage = $state<string | null>(null);
-  let loading = $state<boolean>(false);
+  let result = $state<Problem | null>(null);        // 取得した問題
+  let errorMessage = $state<string | null>(null);   // 取得できなかった場合に入るエラー
+  let loading = $state<boolean>(false);             // 問題を取得中か否か
 
+  // Backend APIを呼び出して、条件にあう問題を1問取得する
   const sendQuery = async (): Promise<void> => {
-    if (errors.rangeError || errors.isMinusUnderDiff || errors.isMinusOverDiff) {
+    if (errors.rangeError || errors.isMinusMinDiff || errors.isMinusMaxDiff) {
       return;
     }
 
@@ -37,15 +44,16 @@
 
     try {
       const API_URL = import.meta.env.VITE_API_URL;
-      const res = await fetch(
-        `${API_URL}/?under=${under_diff}&over=${over_diff}`
-      );
+			const API_CONTENT = `${API_URL}/?min=${min_diff}&max=${max_diff}`;
+      const res = await fetch(API_CONTENT);
 
+			// 条件にあう問題がなかった場合
       if (res.status === 404) {
         const data = await res.json();
         throw new Error(data.message ?? "指定範囲内に該当する問題がありませんでした");
       }
 
+			// 正常に問題が返ってきた場合
       if (!res.ok) {
         throw new Error(`HTTPエラー: ${res.status}`);
       }
@@ -72,15 +80,15 @@
 
     {#if errors.rangeError}
       <p class="text-destructive mb-2 text-sm">最低Diffが最高Diffを超えています。</p>
-    {:else if errors.isMinusOverDiff}
+    {:else if errors.isMinusMaxDiff}
       <p class="text-destructive mb-2 text-sm">最高Diffが負の値になっています。</p>
-    {:else if errors.isMinusUnderDiff}
+    {:else if errors.isMinusMinDiff}
       <p class="text-destructive mb-2 text-sm">最低Diffが負の値になっています</p>
     {/if}
 
     <div class="flex items-center gap-2">
-      <Input type="number" placeholder="最低Diffを入力してください。" isErrors={errors} bind:value={under_diff} />
-      <Input type="number" placeholder="最高Diffを入力してください。" isErrors={errors} bind:value={over_diff} />
+      <Input type="number" placeholder="最低Diffを入力してください。" isErrors={errors} bind:value={min_diff} />
+      <Input type="number" placeholder="最高Diffを入力してください。" isErrors={errors} bind:value={max_diff} />
        <Button onclick={() =>{sendQuery(), cacheInput(currentInput!)}} class="shrink-0 w-24 h-12 flex justify-center items-center" disabled={loading}>
         {#if loading}
           <div class="animate-spin [animation-duration: 1.05s]">
