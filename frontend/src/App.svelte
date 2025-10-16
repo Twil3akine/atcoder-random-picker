@@ -1,5 +1,6 @@
 <script lang="ts">
   import Button from "./components/Button.svelte";
+	import Dialog from "./components/Dialog.svelte";
   import Input from "./components/Input.svelte";
   import Label from "./components/Label.svelte";
   import Message from "./components/Message.svelte";
@@ -7,6 +8,8 @@
   import { Loader } from "@lucide/svelte";
   import { type Problem, type ClosedRange, createValidRange } from "./utils/types";
   import { cacheInput, loadLastInput } from "./utils/cacher";
+
+	// ============================================================
 
   const MIN_DIFF: number = 0;
   const MAX_DIFF: number = 3854;
@@ -72,6 +75,20 @@
       }, 1050);
     }
   }
+
+	// ============================================================
+
+	let isDialogOpen = $state(false);
+
+	const toggleDialog = (e: MouseEvent): void => {
+		e.preventDefault();
+		e.stopPropagation();
+		isDialogOpen = !isDialogOpen;
+	}
+
+	const clickDialog = (result: boolean): void => {
+		isDialogOpen = !isDialogOpen;
+	}
 </script>
 
 <div class="w-full h-full">
@@ -89,7 +106,7 @@
     <div class="flex items-center gap-2">
       <Input type="number" placeholder="最低Diffを入力してください。" isErrors={errors} bind:value={min_diff} />
       <Input type="number" placeholder="最高Diffを入力してください。" isErrors={errors} bind:value={max_diff} />
-       <Button onclick={() =>{sendQuery(), cacheInput(currentInput!)}} class="shrink-0 w-24 h-12 flex justify-center items-center" disabled={loading}>
+			<Button onclick={() =>{sendQuery(), cacheInput(currentInput!)}} class="shrink-0 w-24 h-12 flex justify-center items-center" disabled={loading}>
         {#if loading}
           <div class="animate-spin [animation-duration: 1.05s]">
             <Loader size="1.5rem" />
@@ -122,9 +139,11 @@
           </p>
 
           <!-- Diff表示 -->
-          <Button size="tiny" variant="danger" tone="ghost" class="mt-8" onclick={() => alert(`Difficulty: ${Math.floor(result!.difficulty)}`)}>
-            Show Difficulty
-          </Button>
+          <Button size="tiny" variant="danger" tone="ghost" class="mt-8" onclick={toggleDialog}>Show Difficulty</Button>
+					<Dialog class="max-w-lg w-[80vw] m-auto" enableClose dismissible={true} bind:open={isDialogOpen} onClick={(result => clickDialog(result))}>
+						<Label class="!text-lg !font-semibold">Difficulty: {Math.floor(result!.difficulty)}</Label>
+					</Dialog>
+					
         </div>
       </Message>
     </div>
