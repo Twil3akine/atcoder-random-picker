@@ -13,12 +13,19 @@
 
   const MIN_DIFF: number = 0;
   const MAX_DIFF: number = 3854;
+  const CONTEST_OPTIONS = [
+    { label: "ABC", value: "abc" },
+    { label: "ARC", value: "arc" },
+    { label: "AGC", value: "agc" },
+    { label: "Other", value: "other" },
+  ] as const;
 
   let cachedInput : ClosedRange | null = loadLastInput();
   let currentInput : ClosedRange | null;
 
   let min_diff = $state<number>(cachedInput ? cachedInput.min : MIN_DIFF);
   let max_diff = $state<number>(cachedInput ? cachedInput.max : MAX_DIFF);
+  let selectedContests = $state<string[]>([]);
   
   /*
 	 * バリデーションチェック
@@ -47,7 +54,16 @@
 
     try {
       const API_URL = import.meta.env.VITE_API_URL;
-			const API_CONTENT = `${API_URL}/?min=${min_diff}&max=${max_diff}`;
+      const params = new URLSearchParams({
+        min: String(min_diff),
+        max: String(max_diff),
+      });
+
+      if (selectedContests.length > 0) {
+        params.set("contest", selectedContests.join(","));
+      }
+
+			const API_CONTENT = `${API_URL}/?${params.toString()}`;
       const res = await fetch(API_CONTENT);
 
 			// 条件にあう問題がなかった場合
@@ -89,6 +105,12 @@
 	const clickDialog = (result: boolean): void => {
 		isDialogOpen = !isDialogOpen;
 	}
+
+  const toggleContest = (contest: string): void => {
+    selectedContests = selectedContests.includes(contest)
+      ? selectedContests.filter((value) => value !== contest)
+      : [...selectedContests, contest];
+  }
 </script>
 
 <div class="w-full h-full">
@@ -115,6 +137,20 @@
           Pick
         {/if}
       </Button>
+    </div>
+
+    <div class="flex flex-wrap gap-2 mt-3" aria-label="Contest filters">
+      {#each CONTEST_OPTIONS as contest}
+        <label class="inline-flex items-center gap-2 rounded-md border border-base-stroke-default px-3 py-2 text-sm text-base-foreground-default">
+          <input
+            type="checkbox"
+            class="accent-primary"
+            checked={selectedContests.includes(contest.value)}
+            onchange={() => toggleContest(contest.value)}
+          />
+          <span class="text-sm">{contest.label}</span>
+        </label>
+      {/each}
     </div>
 
     {#if !loading && result !== null}
