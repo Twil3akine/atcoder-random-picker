@@ -163,14 +163,14 @@
 
     <div class="flex flex-wrap gap-2 mt-3" aria-label="Contest filters">
       {#each CONTEST_OPTIONS as contest}
-        <label class="inline-flex items-center gap-2 rounded-md border border-base-stroke-default px-3 py-2 text-xs text-base-foreground-default">
+        <label class="inline-flex items-center gap-2 rounded-md border border-base-stroke-default px-3 py-2 !text-[1rem] text-base-foreground-default">
           <input
             type="checkbox"
             class="accent-primary"
             checked={selectedContests.includes(contest.value)}
             onchange={() => toggleContest(contest.value)}
           />
-          <span class="text-xs">{contest.label}</span>
+          <span class="!text-[1rem]">{contest.label}</span>
         </label>
       {/each}
     </div>
