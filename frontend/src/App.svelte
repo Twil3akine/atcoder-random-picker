@@ -226,4 +226,15 @@
     </div>
   {/if}
   </div>
+
+  <footer class="fixed bottom-4 left-0 flex w-full justify-center">
+    <a
+      class="!text-[0.875rem] text-base-foreground-muted underline underline-offset-4 hover:text-base-foreground-default"
+      href="https://github.com/Twil3akine/atcoder-random-picker/issues/new/choose"
+      target="_blank"
+      rel="noreferrer"
+    >
+      お問い合わせはこちら
+    </a>
+  </footer>
 </div>
