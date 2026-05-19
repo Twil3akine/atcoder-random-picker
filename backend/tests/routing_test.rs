@@ -13,12 +13,32 @@ fn build_test_state() -> Arc<AppState> {
         "abc001_a".to_string(),
         ProblemModel { difficulty: Some(1000.0) },
     );
+    problem_models.insert(
+        "abc212_a".to_string(),
+        ProblemModel { difficulty: Some(900.0) },
+    );
+    problem_models.insert(
+        "typical90_a".to_string(),
+        ProblemModel { difficulty: Some(700.0) },
+    );
 
-    let problems = vec![Problem {
-        id: "abc001_a".to_string(),
-        contest_id: "abc001".to_string(),
-        name: "A - Test Problem".to_string(),
-    }];
+    let problems = vec![
+        Problem {
+            id: "abc001_a".to_string(),
+            contest_id: "abc001".to_string(),
+            name: "A - Test Problem".to_string(),
+        },
+        Problem {
+            id: "abc212_a".to_string(),
+            contest_id: "abc212".to_string(),
+            name: "A - Alloy".to_string(),
+        },
+        Problem {
+            id: "typical90_a".to_string(),
+            contest_id: "typical90".to_string(),
+            name: "A - Other Contest".to_string(),
+        },
+    ];
 
     Arc::new(AppState {
         problems,
@@ -88,4 +108,43 @@ async fn test_random_range() {
     let diff = problem.difficulty;
 
     assert!(500.0 <= diff && diff <= 1500.0);
+}
+
+#[tokio::test]
+async fn test_contest_number_from() {
+    let (status, body) = build_and_send(Method::GET, "/?min=0&max=1500&contest=abc&contest_from=212").await;
+    assert_eq!(status, StatusCode::OK);
+
+    #[derive(serde::Deserialize)]
+    struct ProblemResponse {
+        id: String,
+        contest_id: String,
+    }
+
+    let problem: ProblemResponse = serde_json::from_str(&body).unwrap();
+
+    assert_eq!(problem.id, "abc212_a");
+    assert_eq!(problem.contest_id, "abc212");
+}
+
+#[tokio::test]
+async fn test_other_contest_filter() {
+    let (status, body) = build_and_send(Method::GET, "/?min=0&max=1500&contest=other").await;
+    assert_eq!(status, StatusCode::OK);
+
+    #[derive(serde::Deserialize)]
+    struct ProblemResponse {
+        contest_id: String,
+    }
+
+    let problem: ProblemResponse = serde_json::from_str(&body).unwrap();
+
+    assert_eq!(problem.contest_id, "typical90");
+}
+
+#[tokio::test]
+async fn test_contest_from_greater_than_to() {
+    let (status, body) = build_and_send(Method::GET, "/?contest_from=300&contest_to=200").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(body, "'contest_from' cannot be greater than 'contest_to'.");
 }
