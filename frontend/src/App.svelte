@@ -13,12 +13,21 @@
 
   const MIN_DIFF: number = 0;
   const MAX_DIFF: number = 3854;
+  const CONTEST_OPTIONS = [
+    { label: "ABC", value: "abc" },
+    { label: "ARC", value: "arc" },
+    { label: "AGC", value: "agc" },
+    { label: "Other", value: "other" },
+  ] as const;
 
   let cachedInput : ClosedRange | null = loadLastInput();
   let currentInput : ClosedRange | null;
 
   let min_diff = $state<number>(cachedInput ? cachedInput.min : MIN_DIFF);
   let max_diff = $state<number>(cachedInput ? cachedInput.max : MAX_DIFF);
+  let selectedContests = $state<string[]>([]);
+  let contest_from = $state<string>("");
+  let contest_to = $state<string>("");
   
   /*
 	 * バリデーションチェック
@@ -31,6 +40,9 @@
     isMinusMinDiff: min_diff < 0,
     isMinusMaxDiff: max_diff < 0,
   });
+  let contestRoundError = $derived(
+    contest_from !== "" && contest_to !== "" && Number(contest_from) > Number(contest_to),
+  );
 
   let result = $state<Problem | null>(null);        // 取得した問題
   let errorMessage = $state<string | null>(null);   // 取得できなかった場合に入るエラー
@@ -38,7 +50,7 @@
 
   // Backend APIを呼び出して、条件にあう問題を1問取得する
   const sendQuery = async (): Promise<void> => {
-    if (errors.rangeError || errors.isMinusMinDiff || errors.isMinusMaxDiff) {
+    if (errors.rangeError || errors.isMinusMinDiff || errors.isMinusMaxDiff || contestRoundError) {
       return;
     }
 
@@ -47,7 +59,22 @@
 
     try {
       const API_URL = import.meta.env.VITE_API_URL;
-			const API_CONTENT = `${API_URL}/?min=${min_diff}&max=${max_diff}`;
+      const params = new URLSearchParams({
+        min: String(min_diff),
+        max: String(max_diff),
+      });
+
+      if (selectedContests.length > 0) {
+        params.set("contest", selectedContests.join(","));
+      }
+      if (contest_from !== "") {
+        params.set("contest_from", contest_from);
+      }
+      if (contest_to !== "") {
+        params.set("contest_to", contest_to);
+      }
+
+			const API_CONTENT = `${API_URL}/?${params.toString()}`;
       const res = await fetch(API_CONTENT);
 
 			// 条件にあう問題がなかった場合
@@ -89,6 +116,21 @@
 	const clickDialog = (result: boolean): void => {
 		isDialogOpen = !isDialogOpen;
 	}
+
+  const toggleContest = (contest: string): void => {
+    selectedContests = selectedContests.includes(contest)
+      ? selectedContests.filter((value) => value !== contest)
+      : [...selectedContests, contest];
+  }
+
+  const handlePick = (): void => {
+    if (currentInput === null || contestRoundError) {
+      return;
+    }
+
+    cacheInput(currentInput);
+    sendQuery();
+  }
 </script>
 
 <div class="w-full h-full">
@@ -101,12 +143,14 @@
       <p class="text-destructive mb-2 text-sm">最高Diffが負の値になっています。</p>
     {:else if errors.isMinusMinDiff}
       <p class="text-destructive mb-2 text-sm">最低Diffが負の値になっています</p>
+    {:else if contestRoundError}
+      <p class="text-destructive mb-2 text-sm">開始回が終了回を超えています。</p>
     {/if}
 
     <div class="flex items-center gap-2">
       <Input type="number" placeholder="最低Diffを入力してください。" isErrors={errors} bind:value={min_diff} />
       <Input type="number" placeholder="最高Diffを入力してください。" isErrors={errors} bind:value={max_diff} />
-			<Button onclick={() =>{sendQuery(), cacheInput(currentInput!)}} class="shrink-0 w-24 h-12 flex justify-center items-center" disabled={loading}>
+			<Button onclick={handlePick} class="shrink-0 w-24 h-12 flex justify-center items-center" disabled={loading || errors.rangeError || errors.isMinusMinDiff || errors.isMinusMaxDiff || contestRoundError}>
         {#if loading}
           <div class="animate-spin [animation-duration: 1.05s]">
             <Loader size="1.5rem" />
@@ -115,6 +159,25 @@
           Pick
         {/if}
       </Button>
+    </div>
+
+    <div class="flex flex-wrap gap-2 mt-3" aria-label="Contest filters">
+      {#each CONTEST_OPTIONS as contest}
+        <label class="inline-flex items-center gap-2 rounded-md border border-base-stroke-default px-3 py-2 !text-[1rem] text-base-foreground-default">
+          <input
+            type="checkbox"
+            class="accent-primary"
+            checked={selectedContests.includes(contest.value)}
+            onchange={() => toggleContest(contest.value)}
+          />
+          <span class="!text-[1rem]">{contest.label}</span>
+        </label>
+      {/each}
+    </div>
+
+    <div class="grid grid-cols-2 gap-2 mt-3">
+      <Input type="number" min="1" placeholder="開始回 例: 212" bind:value={contest_from} />
+      <Input type="number" min="1" placeholder="終了回 任意" bind:value={contest_to} />
     </div>
 
     {#if !loading && result !== null}

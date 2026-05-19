@@ -25,7 +25,8 @@ enum Contest {
   ABC,
   ARC,
   AGC,
-  Other(String),
+  Other,
+  Prefix(String),
 }
 
 impl Contest {
@@ -36,8 +37,10 @@ impl Contest {
       Contest::ARC
     } else if id.starts_with("agc") {
       Contest::AGC
+    } else if id == "other" || id == "others" {
+      Contest::Other
     } else {
-      Contest::Other(id.to_string())
+      Contest::Prefix(id.to_string())
     }
   }
 }
@@ -82,6 +85,15 @@ fn with_cors_headers(mut res: Response<Body>) -> Response<Body> {
   res
 }
 
+fn contest_number(contest_id: &str) -> Option<u32> {
+  let number: String = contest_id
+    .chars()
+    .filter(|c| c.is_ascii_digit())
+    .collect();
+
+  number.parse().ok()
+}
+
 pub async fn router(req: Request<Body>, state: Arc<AppState>) -> Result<Response<Body>, Infallible> {
   let now= Local::now();
   let path = req.uri().path().to_string();
@@ -108,8 +120,17 @@ pub async fn router(req: Request<Body>, state: Arc<AppState>) -> Result<Response
           })
           .unwrap_or_default();
 
+        let contest_from: Option<u32> = params.get("contest_from").and_then(|s| s.parse().ok());
+        let contest_to: Option<u32> = params.get("contest_to").and_then(|s| s.parse().ok());
+
         if min > max {
           let mut bad_request = Response::new(Body::from("'min' cannot bt greater than 'max'."));
+          *bad_request.status_mut() = StatusCode::BAD_REQUEST;
+          return Ok(bad_request);
+        }
+
+        if contest_from.zip(contest_to).is_some_and(|(from, to)| from > to) {
+          let mut bad_request = Response::new(Body::from("'contest_from' cannot be greater than 'contest_to'."));
           *bad_request.status_mut() = StatusCode::BAD_REQUEST;
           return Ok(bad_request);
         }
@@ -126,8 +147,21 @@ pub async fn router(req: Request<Body>, state: Arc<AppState>) -> Result<Response
               Contest::ABC => p.contest_id.starts_with("abc"),
               Contest::ARC => p.contest_id.starts_with("arc"),
               Contest::AGC => p.contest_id.starts_with("agc"),
-              Contest::Other(s) => p.contest_id.starts_with(s),
+              Contest::Other => {
+                !p.contest_id.starts_with("abc")
+                  && !p.contest_id.starts_with("arc")
+                  && !p.contest_id.starts_with("agc")
+              }
+              Contest::Prefix(s) => p.contest_id.starts_with(s),
             })
+          })
+          .filter(|p| {
+            let Some(number) = contest_number(&p.contest_id) else {
+              return contest_from.is_none() && contest_to.is_none();
+            };
+
+            contest_from.is_none_or(|from| number >= from)
+              && contest_to.is_none_or(|to| number <= to)
           })
           .filter_map(|p| {
             state.problem_models.get(&p.id).and_then(|m| {
