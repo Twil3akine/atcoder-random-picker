@@ -113,7 +113,6 @@
       const json: Problem = await res.json();
 
       setTimeout(() => {
-        pickActivity = recordPickActivity();
         result = json;
         loading = false;
       }, 1050);
@@ -138,6 +137,10 @@
 
   const clickDialog = (result: boolean): void => {
     isDialogOpen = !isDialogOpen;
+  };
+
+  const markSolved = (): void => {
+    pickActivity = recordPickActivity();
   };
 
   const toggleContest = (contest: string): void => {
@@ -360,6 +363,14 @@
                 >Difficulty: {Math.floor(result!.difficulty)}</Label
               >
             </Dialog>
+
+            <Button
+              size="tiny"
+              variant="success"
+              tone="ghost"
+              class="mt-2"
+              onclick={markSolved}>解いた</Button
+            >
           </div>
         </Message>
       </div>
