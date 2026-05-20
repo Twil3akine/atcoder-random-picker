@@ -29,7 +29,6 @@
     { label: "AGC", value: "agc" },
     { label: "Other", value: "other" },
   ] as const;
-  const ACTIVITY_DAYS = 365;
 
   let cachedInput = loadLastInput();
   let currentInput: ClosedRange | null;
@@ -189,10 +188,13 @@
 
   function buildActivityCells(activity: PickActivity) {
     const today = new Date();
-    const start = new Date(today);
-    start.setDate(today.getDate() - (ACTIVITY_DAYS - 1));
+    const start = new Date(today.getFullYear(), 0, 1);
+    const end = new Date(today.getFullYear(), 11, 31);
+    const activityDays =
+      Math.floor((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) +
+      1;
 
-    return Array.from({ length: ACTIVITY_DAYS }, (_, index) => {
+    return Array.from({ length: activityDays }, (_, index) => {
       const date = new Date(start);
       date.setDate(start.getDate() + index);
       const dateKey = getDateKey(date);
