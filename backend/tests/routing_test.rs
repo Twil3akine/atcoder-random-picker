@@ -143,6 +143,20 @@ async fn test_other_contest_filter() {
 }
 
 #[tokio::test]
+async fn test_contest_number_filter_excludes_other_contests() {
+    let (status, body) = build_and_send(Method::GET, "/?min=0&max=1500&contest=other&contest_from=90").await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+
+    #[derive(serde::Deserialize)]
+    struct ErrorResponse {
+        message: String,
+    }
+
+    let err: ErrorResponse = serde_json::from_str(&body).unwrap();
+    assert_eq!(err.message, "指定Diff範囲に該当する問題がありませんでした");
+}
+
+#[tokio::test]
 async fn test_contest_from_greater_than_to() {
     let (status, body) = build_and_send(Method::GET, "/?contest_from=300&contest_to=200").await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
