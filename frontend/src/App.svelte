@@ -60,8 +60,11 @@
   let errorMessage = $state<string | null>(null); // 取得できなかった場合に入るエラー
   let loading = $state<boolean>(false); // 問題を取得中か否か
   let pickActivity = $state<PickActivity>(loadPickActivity());
-  let activityCells = $derived(buildActivityCells(pickActivity));
-  let activityYear = new Date().getFullYear();
+  let selectedActivityYear = $state<number>(new Date().getFullYear());
+  let activityYears = $derived(buildActivityYears(pickActivity));
+  let activityCells = $derived(
+    buildActivityCells(pickActivity, selectedActivityYear),
+  );
 
   // Backend APIを呼び出して、条件にあう問題を1問取得する
   const sendQuery = async (): Promise<void> => {
@@ -187,10 +190,22 @@
     return `${year}-${month}-${day}`;
   }
 
-  function buildActivityCells(activity: PickActivity) {
-    const today = new Date();
-    const start = new Date(today.getFullYear(), 0, 1);
-    const end = new Date(today.getFullYear(), 11, 31);
+  function buildActivityYears(activity: PickActivity): number[] {
+    const currentYear = new Date().getFullYear();
+    const years = new Set(
+      Object.keys(activity).map((dateKey) => Number(dateKey.slice(0, 4))),
+    );
+
+    years.add(currentYear);
+
+    return Array.from(years)
+      .filter((year) => Number.isInteger(year))
+      .sort((a, b) => b - a);
+  }
+
+  function buildActivityCells(activity: PickActivity, year: number) {
+    const start = new Date(year, 0, 1);
+    const end = new Date(year, 11, 31);
     const activityDays =
       Math.floor((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) +
       1;
@@ -406,9 +421,21 @@
               ></div>
             {/each}
           </div>
-          <span class="!text-[0.875rem] text-base-foreground-muted">
-            {activityYear}
-          </span>
+          <div class="flex flex-col gap-1">
+            {#each activityYears as year}
+              <button
+                type="button"
+                class={`rounded-sm px-1 text-left !text-[0.875rem] ${
+                  selectedActivityYear === year
+                    ? "text-base-foreground-default"
+                    : "text-base-foreground-muted"
+                }`}
+                onclick={() => (selectedActivityYear = year)}
+              >
+                {year}
+              </button>
+            {/each}
+          </div>
         </div>
       </div>
     </div>
