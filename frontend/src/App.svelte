@@ -11,7 +11,13 @@
     type ClosedRange,
     createValidRange,
   } from "./utils/types";
-  import { cacheInput, loadLastInput } from "./utils/cacher";
+  import {
+    cacheInput,
+    loadLastInput,
+    loadPickActivity,
+    recordPickActivity,
+    type PickActivity,
+  } from "./utils/cacher";
 
   // ============================================================
 
@@ -53,6 +59,12 @@
   let result = $state<Problem | null>(null); // 取得した問題
   let errorMessage = $state<string | null>(null); // 取得できなかった場合に入るエラー
   let loading = $state<boolean>(false); // 問題を取得中か否か
+  let pickActivity = $state<PickActivity>(loadPickActivity());
+  let selectedActivityYear = $state<number>(new Date().getFullYear());
+  let activityYears = $derived(buildActivityYears(pickActivity));
+  let activityCells = $derived(
+    buildActivityCells(pickActivity, selectedActivityYear),
+  );
 
   // Backend APIを呼び出して、条件にあう問題を1問取得する
   const sendQuery = async (): Promise<void> => {
@@ -104,6 +116,7 @@
       const json: Problem = await res.json();
 
       setTimeout(() => {
+        pickActivity = recordPickActivity();
         result = json;
         loading = false;
       }, 1050);
@@ -165,6 +178,64 @@
       contest_to: "",
     });
   };
+
+  function getDateKey(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  }
+
+  function buildActivityYears(activity: PickActivity): number[] {
+    const currentYear = new Date().getFullYear();
+    const years = new Set(
+      Object.keys(activity).map((dateKey) => Number(dateKey.slice(0, 4))),
+    );
+
+    years.add(currentYear);
+
+    return Array.from(years)
+      .filter((year) => Number.isInteger(year))
+      .sort((a, b) => b - a);
+  }
+
+  function buildActivityCells(activity: PickActivity, year: number) {
+    const start = new Date(year, 0, 1);
+    const end = new Date(year, 11, 31);
+    const activityDays =
+      Math.floor((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+
+    return Array.from({ length: activityDays }, (_, index) => {
+      const date = new Date(start);
+      date.setDate(start.getDate() + index);
+      const dateKey = getDateKey(date);
+      const count = activity[dateKey] ?? 0;
+
+      return {
+        dateKey,
+        count,
+        level: count === 0 ? 0 : Math.min(4, count),
+      };
+    });
+  }
+
+  function activityClass(level: number): string {
+    if (level === 0) {
+      return "bg-base-container-muted";
+    }
+    if (level === 1) {
+      return "bg-success/30";
+    }
+    if (level === 2) {
+      return "bg-success/50";
+    }
+    if (level === 3) {
+      return "bg-success/70";
+    }
+
+    return "bg-success";
+  }
 </script>
 
 <div class="w-full h-full">
@@ -324,6 +395,40 @@
         </Message>
       </div>
     {/if}
+
+    <div
+      class="relative left-1/2 mt-10 flex w-screen -translate-x-1/2 flex-col items-center gap-3"
+    >
+      <Label class="!text-[1.25rem] !font-normal">Activity</Label>
+      <div class="w-screen overflow-x-auto pb-1">
+        <div class="mx-auto flex w-max items-center gap-8">
+          <div class="grid grid-flow-col grid-rows-7 gap-1">
+            {#each activityCells as cell}
+              <div
+                class={`h-3 w-3 rounded-sm border border-base-stroke-default ${activityClass(cell.level)}`}
+                title={`${cell.dateKey}: ${cell.count}`}
+                aria-label={`${cell.dateKey}: ${cell.count}`}
+              ></div>
+            {/each}
+          </div>
+          <div class="flex flex-col gap-1">
+            {#each activityYears as year}
+              <button
+                type="button"
+                class={`cursor-pointer rounded-sm px-1 text-left !text-[1rem] ${
+                  selectedActivityYear === year
+                    ? "text-base-foreground-default"
+                    : "text-base-foreground-muted"
+                }`}
+                onclick={() => (selectedActivityYear = year)}
+              >
+                {year}
+              </button>
+            {/each}
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <footer class="fixed bottom-4 left-0 flex w-full justify-center">
