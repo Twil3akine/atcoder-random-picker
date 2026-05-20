@@ -116,6 +116,7 @@
       const json: Problem = await res.json();
 
       setTimeout(() => {
+        pickActivity = recordPickActivity();
         result = json;
         loading = false;
       }, 1050);
@@ -140,10 +141,6 @@
 
   const clickDialog = (result: boolean): void => {
     isDialogOpen = !isDialogOpen;
-  };
-
-  const markSolved = (): void => {
-    pickActivity = recordPickActivity();
   };
 
   const toggleContest = (contest: string): void => {
@@ -207,8 +204,7 @@
     const start = new Date(year, 0, 1);
     const end = new Date(year, 11, 31);
     const activityDays =
-      Math.floor((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) +
-      1;
+      Math.floor((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1;
 
     return Array.from({ length: activityDays }, (_, index) => {
       const date = new Date(start);
@@ -381,14 +377,6 @@
                 >Difficulty: {Math.floor(result!.difficulty)}</Label
               >
             </Dialog>
-
-            <Button
-              size="tiny"
-              variant="success"
-              tone="ghost"
-              class="mt-2"
-              onclick={markSolved}>解いた</Button
-            >
           </div>
         </Message>
       </div>
@@ -408,10 +396,12 @@
       </div>
     {/if}
 
-    <div class="relative left-1/2 mt-4 flex w-screen -translate-x-1/2 flex-col items-center gap-2">
-      <Label class="!text-[1rem] !font-medium">Activity</Label>
+    <div
+      class="relative left-1/2 mt-10 flex w-screen -translate-x-1/2 flex-col items-center gap-3"
+    >
+      <Label class="!text-[1.25rem] !font-normal">Activity</Label>
       <div class="w-screen overflow-x-auto pb-1">
-        <div class="mx-auto flex w-max items-center gap-3">
+        <div class="mx-auto flex w-max items-center gap-8">
           <div class="grid grid-flow-col grid-rows-7 gap-1">
             {#each activityCells as cell}
               <div
@@ -425,7 +415,7 @@
             {#each activityYears as year}
               <button
                 type="button"
-                class={`rounded-sm px-1 text-left !text-[0.875rem] ${
+                class={`cursor-pointer rounded-sm px-1 text-left !text-[1rem] ${
                   selectedActivityYear === year
                     ? "text-base-foreground-default"
                     : "text-base-foreground-muted"
