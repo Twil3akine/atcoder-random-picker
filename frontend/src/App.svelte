@@ -11,7 +11,13 @@
     type ClosedRange,
     createValidRange,
   } from "./utils/types";
-  import { cacheInput, loadLastInput } from "./utils/cacher";
+  import {
+    cacheInput,
+    loadLastInput,
+    loadPickActivity,
+    recordPickActivity,
+    type PickActivity,
+  } from "./utils/cacher";
 
   // ============================================================
 
@@ -53,6 +59,7 @@
   let result = $state<Problem | null>(null); // 取得した問題
   let errorMessage = $state<string | null>(null); // 取得できなかった場合に入るエラー
   let loading = $state<boolean>(false); // 問題を取得中か否か
+  let pickActivity = $state<PickActivity>(loadPickActivity());
 
   // Backend APIを呼び出して、条件にあう問題を1問取得する
   const sendQuery = async (): Promise<void> => {
@@ -104,6 +111,7 @@
       const json: Problem = await res.json();
 
       setTimeout(() => {
+        pickActivity = recordPickActivity();
         result = json;
         loading = false;
       }, 1050);
