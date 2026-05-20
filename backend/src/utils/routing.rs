@@ -85,13 +85,14 @@ fn with_cors_headers(mut res: Response<Body>) -> Response<Body> {
   res
 }
 
-fn contest_number(contest_id: &str) -> Option<u32> {
-  let number: String = contest_id
-    .chars()
-    .filter(|c| c.is_ascii_digit())
-    .collect();
+fn standard_contest_number(contest_id: &str) -> Option<u32> {
+  for prefix in ["abc", "arc", "agc"] {
+    if let Some(number) = contest_id.strip_prefix(prefix) {
+      return number.parse().ok();
+    }
+  }
 
-  number.parse().ok()
+  None
 }
 
 pub async fn router(req: Request<Body>, state: Arc<AppState>) -> Result<Response<Body>, Infallible> {
@@ -156,7 +157,7 @@ pub async fn router(req: Request<Body>, state: Arc<AppState>) -> Result<Response
             })
           })
           .filter(|p| {
-            let Some(number) = contest_number(&p.contest_id) else {
+            let Some(number) = standard_contest_number(&p.contest_id) else {
               return contest_from.is_none() && contest_to.is_none();
             };
 
