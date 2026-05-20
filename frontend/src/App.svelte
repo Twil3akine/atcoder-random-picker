@@ -29,6 +29,7 @@
     { label: "AGC", value: "agc" },
     { label: "Other", value: "other" },
   ] as const;
+  const ACTIVITY_DAYS = 84;
 
   let cachedInput = loadLastInput();
   let currentInput: ClosedRange | null;
@@ -60,6 +61,7 @@
   let errorMessage = $state<string | null>(null); // 取得できなかった場合に入るエラー
   let loading = $state<boolean>(false); // 問題を取得中か否か
   let pickActivity = $state<PickActivity>(loadPickActivity());
+  let activityCells = $derived(buildActivityCells(pickActivity));
 
   // Backend APIを呼び出して、条件にあう問題を1問取得する
   const sendQuery = async (): Promise<void> => {
@@ -173,6 +175,50 @@
       contest_to: "",
     });
   };
+
+  function getDateKey(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  }
+
+  function buildActivityCells(activity: PickActivity) {
+    const today = new Date();
+    const start = new Date(today);
+    start.setDate(today.getDate() - (ACTIVITY_DAYS - 1));
+
+    return Array.from({ length: ACTIVITY_DAYS }, (_, index) => {
+      const date = new Date(start);
+      date.setDate(start.getDate() + index);
+      const dateKey = getDateKey(date);
+      const count = activity[dateKey] ?? 0;
+
+      return {
+        dateKey,
+        count,
+        level: count === 0 ? 0 : Math.min(4, count),
+      };
+    });
+  }
+
+  function activityClass(level: number): string {
+    if (level === 0) {
+      return "bg-base-container-muted";
+    }
+    if (level === 1) {
+      return "bg-success/30";
+    }
+    if (level === 2) {
+      return "bg-success/50";
+    }
+    if (level === 3) {
+      return "bg-success/70";
+    }
+
+    return "bg-success";
+  }
 </script>
 
 <div class="w-full h-full">
@@ -332,6 +378,19 @@
         </Message>
       </div>
     {/if}
+
+    <div class="mt-4 flex flex-col gap-2">
+      <Label class="!text-[1rem] !font-medium">Activity</Label>
+      <div class="grid grid-flow-col grid-rows-7 gap-1 self-start">
+        {#each activityCells as cell}
+          <div
+            class={`h-3 w-3 rounded-sm border border-base-stroke-default ${activityClass(cell.level)}`}
+            title={`${cell.dateKey}: ${cell.count}`}
+            aria-label={`${cell.dateKey}: ${cell.count}`}
+          ></div>
+        {/each}
+      </div>
+    </div>
   </div>
 
   <footer class="fixed bottom-4 left-0 flex w-full justify-center">
