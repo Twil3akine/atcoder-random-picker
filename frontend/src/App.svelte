@@ -61,6 +61,7 @@
   let loading = $state<boolean>(false); // 問題を取得中か否か
   let pickActivity = $state<PickActivity>(loadPickActivity());
   let activityCells = $derived(buildActivityCells(pickActivity));
+  let activityYear = new Date().getFullYear();
 
   // Backend APIを呼び出して、条件にあう問題を1問取得する
   const sendQuery = async (): Promise<void> => {
@@ -395,14 +396,19 @@
     <div class="relative left-1/2 mt-4 flex w-screen -translate-x-1/2 flex-col items-center gap-2">
       <Label class="!text-[1rem] !font-medium">Activity</Label>
       <div class="w-screen overflow-x-auto pb-1">
-        <div class="mx-auto grid w-max grid-flow-col grid-rows-7 gap-1">
-          {#each activityCells as cell}
-            <div
-              class={`h-3 w-3 rounded-sm border border-base-stroke-default ${activityClass(cell.level)}`}
-              title={`${cell.dateKey}: ${cell.count}`}
-              aria-label={`${cell.dateKey}: ${cell.count}`}
-            ></div>
-          {/each}
+        <div class="mx-auto flex w-max items-center gap-3">
+          <div class="grid grid-flow-col grid-rows-7 gap-1">
+            {#each activityCells as cell}
+              <div
+                class={`h-3 w-3 rounded-sm border border-base-stroke-default ${activityClass(cell.level)}`}
+                title={`${cell.dateKey}: ${cell.count}`}
+                aria-label={`${cell.dateKey}: ${cell.count}`}
+              ></div>
+            {/each}
+          </div>
+          <span class="!text-[0.875rem] text-base-foreground-muted">
+            {activityYear}
+          </span>
         </div>
       </div>
     </div>
