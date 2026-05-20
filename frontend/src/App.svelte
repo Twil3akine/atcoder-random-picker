@@ -392,16 +392,18 @@
       </div>
     {/if}
 
-    <div class="mt-4 flex flex-col gap-2">
+    <div class="mt-4 flex flex-col items-center gap-2">
       <Label class="!text-[1rem] !font-medium">Activity</Label>
-      <div class="grid grid-flow-col grid-rows-7 gap-1 self-start">
-        {#each activityCells as cell}
-          <div
-            class={`h-3 w-3 rounded-sm border border-base-stroke-default ${activityClass(cell.level)}`}
-            title={`${cell.dateKey}: ${cell.count}`}
-            aria-label={`${cell.dateKey}: ${cell.count}`}
-          ></div>
-        {/each}
+      <div class="w-full overflow-x-auto pb-1">
+        <div class="mx-auto grid w-max grid-flow-col grid-rows-7 gap-1">
+          {#each activityCells as cell}
+            <div
+              class={`h-3 w-3 rounded-sm border border-base-stroke-default ${activityClass(cell.level)}`}
+              title={`${cell.dateKey}: ${cell.count}`}
+              aria-label={`${cell.dateKey}: ${cell.count}`}
+            ></div>
+          {/each}
+        </div>
       </div>
     </div>
   </div>
