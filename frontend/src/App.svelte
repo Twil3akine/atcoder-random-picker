@@ -29,7 +29,7 @@
     { label: "AGC", value: "agc" },
     { label: "Other", value: "other" },
   ] as const;
-  const ACTIVITY_DAYS = 182;
+  const ACTIVITY_DAYS = 365;
 
   let cachedInput = loadLastInput();
   let currentInput: ClosedRange | null;
