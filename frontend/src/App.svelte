@@ -392,9 +392,9 @@
       </div>
     {/if}
 
-    <div class="mt-4 flex flex-col items-center gap-2">
+    <div class="relative left-1/2 mt-4 flex w-screen -translate-x-1/2 flex-col items-center gap-2">
       <Label class="!text-[1rem] !font-medium">Activity</Label>
-      <div class="w-full overflow-x-auto pb-1">
+      <div class="w-screen overflow-x-auto pb-1">
         <div class="mx-auto grid w-max grid-flow-col grid-rows-7 gap-1">
           {#each activityCells as cell}
             <div
