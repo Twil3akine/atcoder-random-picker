@@ -1,7 +1,7 @@
 #![allow(unused)]
 
-use backend::utils::routing::{router, AppState};
 use backend::utils::api::{Problem, ProblemModel};
+use backend::utils::routing::{router, AppState};
 use hyper::{Body, Method, Request, StatusCode};
 use std::assert;
 use std::collections::HashMap;
@@ -11,16 +11,23 @@ fn build_test_state() -> Arc<AppState> {
     let mut problem_models = HashMap::new();
     problem_models.insert(
         "abc001_a".to_string(),
-        ProblemModel { difficulty: Some(1000.0) },
+        ProblemModel {
+            difficulty: Some(1000.0),
+        },
     );
     problem_models.insert(
         "abc212_a".to_string(),
-        ProblemModel { difficulty: Some(900.0) },
+        ProblemModel {
+            difficulty: Some(900.0),
+        },
     );
     problem_models.insert(
         "typical90_a".to_string(),
-        ProblemModel { difficulty: Some(700.0) },
+        ProblemModel {
+            difficulty: Some(700.0),
+        },
     );
+    problem_models.insert("abc459_a".to_string(), ProblemModel { difficulty: None });
 
     let problems = vec![
         Problem {
@@ -37,6 +44,11 @@ fn build_test_state() -> Arc<AppState> {
             id: "typical90_a".to_string(),
             contest_id: "typical90".to_string(),
             name: "A - Other Contest".to_string(),
+        },
+        Problem {
+            id: "abc459_a".to_string(),
+            contest_id: "abc459".to_string(),
+            name: "A - Hell, World!".to_string(),
         },
     ];
 
@@ -112,7 +124,8 @@ async fn test_random_range() {
 
 #[tokio::test]
 async fn test_contest_number_from() {
-    let (status, body) = build_and_send(Method::GET, "/?min=0&max=1500&contest=abc&contest_from=212").await;
+    let (status, body) =
+        build_and_send(Method::GET, "/?min=0&max=1500&contest=abc&contest_from=212").await;
     assert_eq!(status, StatusCode::OK);
 
     #[derive(serde::Deserialize)]
@@ -144,7 +157,11 @@ async fn test_other_contest_filter() {
 
 #[tokio::test]
 async fn test_contest_number_filter_excludes_other_contests() {
-    let (status, body) = build_and_send(Method::GET, "/?min=0&max=1500&contest=other&contest_from=90").await;
+    let (status, body) = build_and_send(
+        Method::GET,
+        "/?min=0&max=1500&contest=other&contest_from=90",
+    )
+    .await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 
     #[derive(serde::Deserialize)]
@@ -161,4 +178,65 @@ async fn test_contest_from_greater_than_to() {
     let (status, body) = build_and_send(Method::GET, "/?contest_from=300&contest_to=200").await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
     assert_eq!(body, "'contest_from' cannot be greater than 'contest_to'.");
+}
+
+#[tokio::test]
+async fn test_contest_range_includes_problem_without_difficulty_when_range_omitted() {
+    let (status, body) =
+        build_and_send(Method::GET, "/?contest=abc&contest_from=459&contest_to=459").await;
+    assert_eq!(status, StatusCode::OK);
+
+    #[derive(serde::Deserialize)]
+    struct ProblemResponse {
+        id: String,
+        contest_id: String,
+        difficulty: Option<f64>,
+    }
+
+    let problem: ProblemResponse = serde_json::from_str(&body).unwrap();
+
+    assert_eq!(problem.id, "abc459_a");
+    assert_eq!(problem.contest_id, "abc459");
+    assert_eq!(problem.difficulty, None);
+}
+
+#[tokio::test]
+async fn test_full_difficulty_range_includes_problem_without_difficulty() {
+    let (status, body) = build_and_send(
+        Method::GET,
+        "/?min=0&max=3854&contest=abc&contest_from=459&contest_to=459",
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
+    #[derive(serde::Deserialize)]
+    struct ProblemResponse {
+        id: String,
+        contest_id: String,
+        difficulty: Option<f64>,
+    }
+
+    let problem: ProblemResponse = serde_json::from_str(&body).unwrap();
+
+    assert_eq!(problem.id, "abc459_a");
+    assert_eq!(problem.contest_id, "abc459");
+    assert_eq!(problem.difficulty, None);
+}
+
+#[tokio::test]
+async fn test_explicit_difficulty_range_excludes_problem_without_difficulty() {
+    let (status, body) = build_and_send(
+        Method::GET,
+        "/?min=0&max=1500&contest=abc&contest_from=459&contest_to=459",
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+
+    #[derive(serde::Deserialize)]
+    struct ErrorResponse {
+        message: String,
+    }
+
+    let err: ErrorResponse = serde_json::from_str(&body).unwrap();
+    assert_eq!(err.message, "指定Diff範囲に該当する問題がありませんでした");
 }
