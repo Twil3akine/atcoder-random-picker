@@ -9,6 +9,10 @@ on:
 permissions:
   contents: write # push 権限が必要
 
+concurrency:
+  group: update-atcoder-problems-json
+  cancel-in-progress: false
+
 jobs:
   update-json:
     runs-on: ubuntu-latest
@@ -20,27 +24,47 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 22
 
-      - name: Install dependencies
-        run: npm install
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Validate fetch-json script
+        run: node --check json_fetch.mjs
         working-directory: backend/data
 
       - name: Run fetch-json script
         run: node json_fetch.mjs
         working-directory: backend/data
 
+      - name: Run Backend tests
+        run: cargo test --verbose
+        working-directory: backend
+
       - name: Commit changes if updated
+        id: commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add problems.json problem-models.json
+          git add backend/data/problems.json backend/data/problem-models.json
           if git diff --cached --quiet; then
             echo "No changes in JSON files"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             git commit -m "chore: update problems.json and problem-models.json"
             git push
+            echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
-        working-directory: backend/data
+
+      - name: Set up flyctl
+        if: steps.commit.outputs.changed == 'true'
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy to Fly.io
+        if: steps.commit.outputs.changed == 'true'
+        working-directory: backend
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: flyctl deploy --remote-only
