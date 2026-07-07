@@ -36,8 +36,12 @@
   let min_diff = $state<number>(cachedInput ? cachedInput.min : MIN_DIFF);
   let max_diff = $state<number>(cachedInput ? cachedInput.max : MAX_DIFF);
   let selectedContests = $state<string[]>(cachedInput?.selectedContests ?? []);
-  let contest_from = $state<string>(cachedInput?.contest_from ?? "");
-  let contest_to = $state<string>(cachedInput?.contest_to ?? "");
+  let contest_from = $state<string | number | null | undefined>(
+    cachedInput?.contest_from ?? "",
+  );
+  let contest_to = $state<string | number | null | undefined>(
+    cachedInput?.contest_to ?? "",
+  );
 
   /*
    * バリデーションチェック
@@ -51,9 +55,10 @@
     isMinusMaxDiff: max_diff < 0,
   });
   let contestRoundError = $derived(
-    contest_from !== "" &&
-      contest_to !== "" &&
-      Number(contest_from) > Number(contest_to),
+    inputValueToString(contest_from) !== "" &&
+      inputValueToString(contest_to) !== "" &&
+      Number(inputValueToString(contest_from)) >
+        Number(inputValueToString(contest_to)),
   );
 
   let result = $state<Problem | null>(null); // 取得した問題
@@ -90,11 +95,13 @@
       if (selectedContests.length > 0) {
         params.set("contest", selectedContests.join(","));
       }
-      if (contest_from !== "") {
-        params.set("contest_from", contest_from);
+      const contestFromParam = inputValueToString(contest_from);
+      const contestToParam = inputValueToString(contest_to);
+      if (contestFromParam !== "") {
+        params.set("contest_from", contestFromParam);
       }
-      if (contest_to !== "") {
-        params.set("contest_to", contest_to);
+      if (contestToParam !== "") {
+        params.set("contest_to", contestToParam);
       }
 
       const API_CONTENT = `${API_URL}/?${params.toString()}`;
@@ -110,7 +117,7 @@
 
       // 正常に問題が返ってきた場合
       if (!res.ok) {
-        throw new Error(`HTTPエラー: ${res.status}`);
+        throw new Error("指定範囲内に該当する問題がありませんでした");
       }
 
       const json: Problem = await res.json();
@@ -158,8 +165,8 @@
       min: currentInput.min,
       max: currentInput.max,
       selectedContests,
-      contest_from,
-      contest_to,
+      contest_from: inputValueToString(contest_from),
+      contest_to: inputValueToString(contest_to),
     });
     sendQuery();
   };
@@ -235,6 +242,14 @@
     }
 
     return "bg-success";
+  }
+
+  function inputValueToString(value: string | number | null | undefined): string {
+    if (value === null || value === undefined) {
+      return "";
+    }
+
+    return String(value).trim();
   }
 </script>
 

@@ -16,6 +16,18 @@ fn build_test_state() -> Arc<AppState> {
         },
     );
     problem_models.insert(
+        "arc001_a".to_string(),
+        ProblemModel {
+            difficulty: Some(1100.0),
+        },
+    );
+    problem_models.insert(
+        "agc001_a".to_string(),
+        ProblemModel {
+            difficulty: Some(1200.0),
+        },
+    );
+    problem_models.insert(
         "abc212_a".to_string(),
         ProblemModel {
             difficulty: Some(900.0),
@@ -46,6 +58,16 @@ fn build_test_state() -> Arc<AppState> {
             id: "abc001_a".to_string(),
             contest_id: "abc001".to_string(),
             name: "A - Test Problem".to_string(),
+        },
+        Problem {
+            id: "arc001_a".to_string(),
+            contest_id: "arc001".to_string(),
+            name: "A - ARC Test Problem".to_string(),
+        },
+        Problem {
+            id: "agc001_a".to_string(),
+            contest_id: "agc001".to_string(),
+            name: "A - AGC Test Problem".to_string(),
         },
         Problem {
             id: "abc212_a".to_string(),
@@ -133,10 +155,18 @@ async fn test_negative_min_is_bad_request() {
 }
 
 #[tokio::test]
-async fn test_max_over_upper_limit_is_bad_request() {
+async fn test_max_over_previous_upper_limit_is_allowed() {
     let (status, body) = build_and_send(Method::GET, "/?min=0&max=3855").await;
-    assert_eq!(status, StatusCode::BAD_REQUEST);
-    assert_eq!(body, "'max' cannot be greater than 3854.");
+    assert_eq!(status, StatusCode::OK);
+
+    #[derive(serde::Deserialize)]
+    struct ProblemResponse {
+        difficulty: f64,
+    }
+
+    let problem: ProblemResponse = serde_json::from_str(&body).unwrap();
+
+    assert!(problem.difficulty <= 3855.0);
 }
 
 #[tokio::test]
@@ -191,6 +221,92 @@ async fn test_contest_number_from() {
 
     assert_eq!(problem.id, "abc212_a");
     assert_eq!(problem.contest_id, "abc212");
+}
+
+#[tokio::test]
+async fn test_contest_number_to_without_from() {
+    let (status, body) = build_and_send(
+        Method::GET,
+        "/?min=0&max=1500&contest=abc,arc,agc&contest_to=1",
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
+    #[derive(serde::Deserialize)]
+    struct ProblemResponse {
+        id: String,
+        contest_id: String,
+    }
+
+    let problem: ProblemResponse = serde_json::from_str(&body).unwrap();
+
+    assert!(["abc001_a", "arc001_a", "agc001_a"].contains(&problem.id.as_str()));
+    assert!(["abc001", "arc001", "agc001"].contains(&problem.contest_id.as_str()));
+}
+
+#[tokio::test]
+async fn test_empty_contest_from_is_ignored() {
+    let (status, body) = build_and_send(
+        Method::GET,
+        "/?min=0&max=1500&contest=abc,arc,agc&contest_from=&contest_to=1",
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
+    #[derive(serde::Deserialize)]
+    struct ProblemResponse {
+        contest_id: String,
+    }
+
+    let problem: ProblemResponse = serde_json::from_str(&body).unwrap();
+
+    assert!(["abc001", "arc001", "agc001"].contains(&problem.contest_id.as_str()));
+}
+
+#[tokio::test]
+async fn test_agc_only_can_be_picked() {
+    let (status, body) = build_and_send(Method::GET, "/?min=0&max=1500&contest=agc").await;
+    assert_eq!(status, StatusCode::OK);
+
+    #[derive(serde::Deserialize)]
+    struct ProblemResponse {
+        contest_id: String,
+        difficulty: f64,
+    }
+
+    let problem: ProblemResponse = serde_json::from_str(&body).unwrap();
+
+    assert!(problem.contest_id.starts_with("agc"));
+    assert!(problem.difficulty <= 1500.0);
+}
+
+#[tokio::test]
+async fn test_agc_only_with_large_max_is_not_bad_request() {
+    let (status, body) = build_and_send(Method::GET, "/?min=0&max=999999&contest=agc").await;
+    assert_eq!(status, StatusCode::OK);
+
+    #[derive(serde::Deserialize)]
+    struct ProblemResponse {
+        contest_id: String,
+    }
+
+    let problem: ProblemResponse = serde_json::from_str(&body).unwrap();
+
+    assert!(problem.contest_id.starts_with("agc"));
+}
+
+#[tokio::test]
+async fn test_agc_only_without_matching_difficulty_is_not_found() {
+    let (status, body) = build_and_send(Method::GET, "/?min=1300&max=1400&contest=agc").await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+
+    #[derive(serde::Deserialize)]
+    struct ErrorResponse {
+        message: String,
+    }
+
+    let err: ErrorResponse = serde_json::from_str(&body).unwrap();
+    assert_eq!(err.message, "指定Diff範囲に該当する問題がありませんでした");
 }
 
 #[tokio::test]

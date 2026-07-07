@@ -15,7 +15,6 @@ use std::vec::Vec;
 use crate::utils::api::{Problem, ProblemModel};
 
 const MIN_DIFFICULTY: f64 = 0.0;
-const MAX_DIFFICULTY: f64 = 3854.0;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -78,24 +77,38 @@ fn parse_optional_f64(params: &HashMap<String, String>, key: &str) -> Result<Opt
     params
         .get(key)
         .map(|value| {
+            let value = value.trim();
+            if value.is_empty() {
+                return Ok(None);
+            }
+
             value
                 .parse::<f64>()
                 .ok()
                 .filter(|value| value.is_finite())
+                .map(Some)
                 .ok_or_else(|| format!("'{}' must be a number.", key))
         })
         .transpose()
+        .map(Option::flatten)
 }
 
 fn parse_optional_u32(params: &HashMap<String, String>, key: &str) -> Result<Option<u32>, String> {
     params
         .get(key)
         .map(|value| {
+            let value = value.trim();
+            if value.is_empty() {
+                return Ok(None);
+            }
+
             value
                 .parse::<u32>()
+                .map(Some)
                 .map_err(|_| format!("'{}' must be a positive integer.", key))
         })
         .transpose()
+        .map(Option::flatten)
 }
 
 fn log(now: DateTime<Local>, method: &str, path: &str, status: StatusCode) {
@@ -156,7 +169,7 @@ pub async fn router(
                 Err(message) => return Ok(bad_request(&message)),
             };
             let max: f64 = match parse_optional_f64(&params, "max") {
-                Ok(max) => max.unwrap_or(MAX_DIFFICULTY),
+                Ok(max) => max.unwrap_or(f64::INFINITY),
                 Err(message) => return Ok(bad_request(&message)),
             };
             let allows_unknown_difficulty =
@@ -189,10 +202,6 @@ pub async fn router(
 
             if min < MIN_DIFFICULTY {
                 return Ok(bad_request("'min' cannot be less than 0."));
-            }
-
-            if max > MAX_DIFFICULTY {
-                return Ok(bad_request("'max' cannot be greater than 3854."));
             }
 
             if contest_from
