@@ -2,8 +2,8 @@ name: Update AtCoder Problems JSON
 
 on:
   schedule:
-    # 毎週水曜 0:00 UTC（日本時間 9:00）
-    - cron: "0 0 * * 3"
+    # 毎週月曜 0:00 UTC（日本時間 9:00）
+    - cron: "0 0 * * 1"
   workflow_dispatch: # 手動実行も可能
 
 permissions:
