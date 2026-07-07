@@ -22,6 +22,18 @@ fn build_test_state() -> Arc<AppState> {
         },
     );
     problem_models.insert(
+        "abc213_a".to_string(),
+        ProblemModel {
+            difficulty: Some(850.0),
+        },
+    );
+    problem_models.insert(
+        "arc212_a".to_string(),
+        ProblemModel {
+            difficulty: Some(950.0),
+        },
+    );
+    problem_models.insert(
         "typical90_a".to_string(),
         ProblemModel {
             difficulty: Some(700.0),
@@ -39,6 +51,16 @@ fn build_test_state() -> Arc<AppState> {
             id: "abc212_a".to_string(),
             contest_id: "abc212".to_string(),
             name: "A - Alloy".to_string(),
+        },
+        Problem {
+            id: "abc213_a".to_string(),
+            contest_id: "abc213".to_string(),
+            name: "A - Bitwise Exclusive Or".to_string(),
+        },
+        Problem {
+            id: "arc212_a".to_string(),
+            contest_id: "arc212".to_string(),
+            name: "A - ARC Test Problem".to_string(),
         },
         Problem {
             id: "typical90_a".to_string(),
@@ -100,7 +122,35 @@ async fn test_not_found_problem() {
 async fn test_min_greater_than_max() {
     let (status, body) = build_and_send(Method::GET, "/?min=1500&max=500").await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
-    assert_eq!(body, "'min' cannot bt greater than 'max'.");
+    assert_eq!(body, "'min' cannot be greater than 'max'.");
+}
+
+#[tokio::test]
+async fn test_negative_min_is_bad_request() {
+    let (status, body) = build_and_send(Method::GET, "/?min=-1&max=500").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(body, "'min' cannot be less than 0.");
+}
+
+#[tokio::test]
+async fn test_max_over_upper_limit_is_bad_request() {
+    let (status, body) = build_and_send(Method::GET, "/?min=0&max=3855").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(body, "'max' cannot be greater than 3854.");
+}
+
+#[tokio::test]
+async fn test_invalid_min_is_bad_request() {
+    let (status, body) = build_and_send(Method::GET, "/?min=abc&max=500").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(body, "'min' must be a number.");
+}
+
+#[tokio::test]
+async fn test_invalid_contest_from_is_bad_request() {
+    let (status, body) = build_and_send(Method::GET, "/?contest_from=abc").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(body, "'contest_from' must be a positive integer.");
 }
 
 #[tokio::test]
@@ -124,8 +174,11 @@ async fn test_random_range() {
 
 #[tokio::test]
 async fn test_contest_number_from() {
-    let (status, body) =
-        build_and_send(Method::GET, "/?min=0&max=1500&contest=abc&contest_from=212").await;
+    let (status, body) = build_and_send(
+        Method::GET,
+        "/?min=0&max=1500&contest=abc&contest_from=212&contest_to=212",
+    )
+    .await;
     assert_eq!(status, StatusCode::OK);
 
     #[derive(serde::Deserialize)]
@@ -138,6 +191,73 @@ async fn test_contest_number_from() {
 
     assert_eq!(problem.id, "abc212_a");
     assert_eq!(problem.contest_id, "abc212");
+}
+
+#[tokio::test]
+async fn test_multiple_contests_and_round_range_are_combined() {
+    let (status, body) = build_and_send(
+        Method::GET,
+        "/?min=800&max=1000&contest=abc,arc&contest_from=212&contest_to=212",
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
+    #[derive(serde::Deserialize)]
+    struct ProblemResponse {
+        id: String,
+        contest_id: String,
+        difficulty: f64,
+    }
+
+    let problem: ProblemResponse = serde_json::from_str(&body).unwrap();
+
+    assert!(["abc212_a", "arc212_a"].contains(&problem.id.as_str()));
+    assert!(["abc212", "arc212"].contains(&problem.contest_id.as_str()));
+    assert!(800.0 <= problem.difficulty && problem.difficulty <= 1000.0);
+}
+
+#[tokio::test]
+async fn test_multiple_contests_with_difficulty_range_narrows_candidates() {
+    let (status, body) = build_and_send(
+        Method::GET,
+        "/?min=925&max=975&contest=abc,arc&contest_from=212&contest_to=212",
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
+    #[derive(serde::Deserialize)]
+    struct ProblemResponse {
+        id: String,
+        contest_id: String,
+        difficulty: f64,
+    }
+
+    let problem: ProblemResponse = serde_json::from_str(&body).unwrap();
+
+    assert_eq!(problem.id, "arc212_a");
+    assert_eq!(problem.contest_id, "arc212");
+    assert_eq!(problem.difficulty, 950.0);
+}
+
+#[tokio::test]
+async fn test_contest_and_round_filters_exclude_out_of_range_contests() {
+    let (status, body) = build_and_send(
+        Method::GET,
+        "/?min=800&max=1000&contest=abc&contest_from=213&contest_to=213",
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
+    #[derive(serde::Deserialize)]
+    struct ProblemResponse {
+        id: String,
+        contest_id: String,
+    }
+
+    let problem: ProblemResponse = serde_json::from_str(&body).unwrap();
+
+    assert_eq!(problem.id, "abc213_a");
+    assert_eq!(problem.contest_id, "abc213");
 }
 
 #[tokio::test]
@@ -201,26 +321,21 @@ async fn test_contest_range_includes_problem_without_difficulty_when_range_omitt
 }
 
 #[tokio::test]
-async fn test_full_difficulty_range_includes_problem_without_difficulty() {
+async fn test_full_difficulty_range_excludes_problem_without_difficulty() {
     let (status, body) = build_and_send(
         Method::GET,
         "/?min=0&max=3854&contest=abc&contest_from=459&contest_to=459",
     )
     .await;
-    assert_eq!(status, StatusCode::OK);
+    assert_eq!(status, StatusCode::NOT_FOUND);
 
     #[derive(serde::Deserialize)]
-    struct ProblemResponse {
-        id: String,
-        contest_id: String,
-        difficulty: Option<f64>,
+    struct ErrorResponse {
+        message: String,
     }
 
-    let problem: ProblemResponse = serde_json::from_str(&body).unwrap();
-
-    assert_eq!(problem.id, "abc459_a");
-    assert_eq!(problem.contest_id, "abc459");
-    assert_eq!(problem.difficulty, None);
+    let err: ErrorResponse = serde_json::from_str(&body).unwrap();
+    assert_eq!(err.message, "指定Diff範囲に該当する問題がありませんでした");
 }
 
 #[tokio::test]

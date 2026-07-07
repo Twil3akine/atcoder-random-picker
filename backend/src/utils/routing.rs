@@ -14,6 +14,9 @@ use std::vec::Vec;
 
 use crate::utils::api::{Problem, ProblemModel};
 
+const MIN_DIFFICULTY: f64 = 0.0;
+const MAX_DIFFICULTY: f64 = 3854.0;
+
 #[derive(Clone)]
 pub struct AppState {
     pub problems: Vec<Problem>,
@@ -58,11 +61,41 @@ struct ErrorResponse {
     message: String,
 }
 
+fn bad_request(message: &str) -> Response<Body> {
+    let mut res = Response::new(Body::from(message.to_string()));
+    *res.status_mut() = StatusCode::BAD_REQUEST;
+    with_cors_headers(res)
+}
+
 async fn get_parameter(req: &Request<Body>) -> HashMap<String, String> {
     let query = req.uri().query().unwrap_or("");
     url::form_urlencoded::parse(query.as_bytes())
         .into_owned()
         .collect()
+}
+
+fn parse_optional_f64(params: &HashMap<String, String>, key: &str) -> Result<Option<f64>, String> {
+    params
+        .get(key)
+        .map(|value| {
+            value
+                .parse::<f64>()
+                .ok()
+                .filter(|value| value.is_finite())
+                .ok_or_else(|| format!("'{}' must be a number.", key))
+        })
+        .transpose()
+}
+
+fn parse_optional_u32(params: &HashMap<String, String>, key: &str) -> Result<Option<u32>, String> {
+    params
+        .get(key)
+        .map(|value| {
+            value
+                .parse::<u32>()
+                .map_err(|_| format!("'{}' must be a positive integer.", key))
+        })
+        .transpose()
 }
 
 fn log(now: DateTime<Local>, method: &str, path: &str, status: StatusCode) {
@@ -118,44 +151,57 @@ pub async fn router(
         (&hyper::Method::GET, "/") => {
             let params: HashMap<String, String> = get_parameter(&req).await;
 
-            let min: f64 = params
-                .get("min")
-                .and_then(|s| s.parse().ok())
-                .unwrap_or(0.0);
-            let max: f64 = params
-                .get("max")
-                .and_then(|s| s.parse().ok())
-                .unwrap_or(3854.0);
-            let allows_unknown_difficulty = min <= 0.0 && max >= 3854.0;
+            let min: f64 = match parse_optional_f64(&params, "min") {
+                Ok(min) => min.unwrap_or(MIN_DIFFICULTY),
+                Err(message) => return Ok(bad_request(&message)),
+            };
+            let max: f64 = match parse_optional_f64(&params, "max") {
+                Ok(max) => max.unwrap_or(MAX_DIFFICULTY),
+                Err(message) => return Ok(bad_request(&message)),
+            };
+            let allows_unknown_difficulty =
+                !params.contains_key("min") && !params.contains_key("max");
 
             let contest_filters: Vec<Contest> = params
                 .get("contest")
                 .map(|s| {
                     s.split(',')
-                        .map(|id| Contest::from_id(id.trim()))
+                        .filter_map(|id| {
+                            let id = id.trim();
+                            (!id.is_empty()).then(|| Contest::from_id(id))
+                        })
                         .collect::<Vec<Contest>>()
                 })
                 .unwrap_or_default();
 
-            let contest_from: Option<u32> = params.get("contest_from").and_then(|s| s.parse().ok());
-            let contest_to: Option<u32> = params.get("contest_to").and_then(|s| s.parse().ok());
+            let contest_from: Option<u32> = match parse_optional_u32(&params, "contest_from") {
+                Ok(contest_from) => contest_from,
+                Err(message) => return Ok(bad_request(&message)),
+            };
+            let contest_to: Option<u32> = match parse_optional_u32(&params, "contest_to") {
+                Ok(contest_to) => contest_to,
+                Err(message) => return Ok(bad_request(&message)),
+            };
 
             if min > max {
-                let mut bad_request =
-                    Response::new(Body::from("'min' cannot bt greater than 'max'."));
-                *bad_request.status_mut() = StatusCode::BAD_REQUEST;
-                return Ok(bad_request);
+                return Ok(bad_request("'min' cannot be greater than 'max'."));
+            }
+
+            if min < MIN_DIFFICULTY {
+                return Ok(bad_request("'min' cannot be less than 0."));
+            }
+
+            if max > MAX_DIFFICULTY {
+                return Ok(bad_request("'max' cannot be greater than 3854."));
             }
 
             if contest_from
                 .zip(contest_to)
                 .is_some_and(|(from, to)| from > to)
             {
-                let mut bad_request = Response::new(Body::from(
+                return Ok(bad_request(
                     "'contest_from' cannot be greater than 'contest_to'.",
                 ));
-                *bad_request.status_mut() = StatusCode::BAD_REQUEST;
-                return Ok(bad_request);
             }
 
             let mut rng = rand::thread_rng();

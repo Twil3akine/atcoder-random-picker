@@ -9,6 +9,12 @@ struct Problem {
     contest_id: String,
 }
 
+fn standard_contest_number(contest_id: &str, prefix: &str) -> Option<u32> {
+    contest_id
+        .strip_prefix(prefix)
+        .and_then(|number| number.parse().ok())
+}
+
 #[test]
 fn abc458_and_abc459_exist_in_problem_data_and_models() {
     let problems_text = fs::read_to_string("data/problems.json").unwrap();
@@ -52,5 +58,24 @@ fn abc458_and_abc459_exist_in_problem_data_and_models() {
                 "{id} is missing from problem-models.json"
             );
         }
+    }
+}
+
+#[test]
+fn problem_data_is_not_older_than_known_current_standard_contests() {
+    let problems_text = fs::read_to_string("data/problems.json").unwrap();
+    let problems: Vec<Problem> = serde_json::from_str(&problems_text).unwrap();
+
+    for (prefix, expected_latest) in [("abc", 465), ("arc", 223), ("agc", 77)] {
+        let latest = problems
+            .iter()
+            .filter_map(|problem| standard_contest_number(&problem.contest_id, prefix))
+            .max()
+            .unwrap_or(0);
+
+        assert!(
+            latest >= expected_latest,
+            "{prefix} data is stale: latest {latest}, expected at least {expected_latest}"
+        );
     }
 }
