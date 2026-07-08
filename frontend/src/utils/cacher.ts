@@ -1,6 +1,6 @@
 export type CachedInput = {
-  min: number;
-  max: number;
+  min: number | "";
+  max: number | "";
   selectedContests: string[];
   contest_from: string;
   contest_to: string;
@@ -24,7 +24,10 @@ export const loadLastInput = (): CachedInput | null => {
 
   const parsed = JSON.parse(data) as Partial<CachedInput>;
 
-  if (typeof parsed.min !== "number" || typeof parsed.max !== "number") {
+  if (
+    (typeof parsed.min !== "number" && parsed.min !== "") ||
+    (typeof parsed.max !== "number" && parsed.max !== "")
+  ) {
     return null;
   }
 
