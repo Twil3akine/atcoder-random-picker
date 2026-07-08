@@ -6,11 +6,11 @@ export interface Problem {
 };
 
 export type ClosedRange = {
-  min: number;
-  max: number;
+  min: number | "";
+  max: number | "";
 } & { readonly __brand: unique symbol }; 
 
 // for validation
-export const createValidRange = (min: number, max: number): ClosedRange | null => {
-  return min>max ? null : {min, max, __brand: Symbol('ClosedRange') as never};
+export const createValidRange = (min: number | "", max: number | ""): ClosedRange | null => {
+  return min !== "" && max !== "" && min>max ? null : {min, max, __brand: Symbol('ClosedRange') as never};
 }

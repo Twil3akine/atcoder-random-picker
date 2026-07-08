@@ -33,8 +33,8 @@
   let cachedInput = loadLastInput();
   let currentInput: ClosedRange | null;
 
-  let min_diff = $state<number>(cachedInput ? cachedInput.min : MIN_DIFF);
-  let max_diff = $state<number>(cachedInput ? cachedInput.max : MAX_DIFF);
+  let min_diff = $state<number | "">(cachedInput ? cachedInput.min : MIN_DIFF);
+  let max_diff = $state<number | "">(cachedInput ? cachedInput.max : MAX_DIFF);
   let selectedContests = $state<string[]>(cachedInput?.selectedContests ?? []);
   let contest_from = $state<string | number | null | undefined>(
     cachedInput?.contest_from ?? "",
@@ -51,8 +51,8 @@
    */
   let errors = $derived({
     rangeError: !(currentInput = createValidRange(min_diff, max_diff)),
-    isMinusMinDiff: min_diff < 0,
-    isMinusMaxDiff: max_diff < 0,
+    isMinusMinDiff: min_diff !== "" && min_diff < 0,
+    isMinusMaxDiff: max_diff !== "" && max_diff < 0,
   });
   let contestRoundError = $derived(
     inputValueToString(contest_from) !== "" &&
@@ -87,10 +87,13 @@
 
     try {
       const API_URL = import.meta.env.VITE_API_URL;
-      const params = new URLSearchParams({
-        min: String(min_diff),
-        max: String(max_diff),
-      });
+      const params = new URLSearchParams();
+      if (min_diff !== "") {
+        params.set("min", String(min_diff));
+      }
+      if (max_diff !== "") {
+        params.set("max", String(max_diff));
+      }
 
       if (selectedContests.length > 0) {
         params.set("contest", selectedContests.join(","));
@@ -172,14 +175,14 @@
   };
 
   const setDefault = (): void => {
-    min_diff = MIN_DIFF;
-    max_diff = MAX_DIFF;
+    min_diff = "";
+    max_diff = "";
     selectedContests = ["abc"];
     contest_from = "212";
     contest_to = "";
     cacheInput({
-      min: MIN_DIFF,
-      max: MAX_DIFF,
+      min: "",
+      max: "",
       selectedContests: ["abc"],
       contest_from: "212",
       contest_to: "",
