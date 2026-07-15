@@ -20,7 +20,7 @@
   import type { Snippet } from 'svelte';
 
   export const dialogVariants = cva(
-    'relative flex flex-col gap-6 p-6 bg-base-container-default border border-base-stroke-default border-secondary rounded-lg shadow-lg',
+    'relative flex max-h-[calc(100dvh-2rem)] max-w-[calc(100vw-2rem)] flex-col gap-6 overflow-y-auto p-6 bg-base-container-default border border-base-stroke-default border-secondary rounded-lg shadow-lg',
   );
 
   export type DialogVariants = VariantProps<typeof dialogVariants>;
@@ -101,7 +101,7 @@
 
 {#if open}
   <div class="fixed inset-0 bg-base-container-default/25 z-40 backdrop-blur-xs" bind:this={backgroundElement} transition:fade={{ duration: 105 }}></div>
-  <div class="fixed inset-0 z-50 size-fit m-auto">
+  <div class="fixed inset-4 z-50 m-auto flex items-center justify-center">
     <div class={dialogVariantsClass} transition:scale={{ start: 0.9, duration: 105 }}>
       {@render children()}
       {#if enableClose}

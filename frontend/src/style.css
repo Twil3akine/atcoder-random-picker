@@ -88,13 +88,11 @@
 }
 
 html {
-  min-width: 20rem;
   background: var(--color-base-container-default);
   color: var(--color-base-foreground-default);
 }
 
 body {
-  min-width: 20rem;
   margin: 0;
 }
 
