@@ -84,7 +84,6 @@
   font-family: "Ubuntu Sans Mono", "Noto Sans JP", "serif";
   text-decoration: none;
   list-style: none;
-  font-size: 103.5%;
 }
 
 html {
@@ -94,6 +93,7 @@ html {
 
 body {
   margin: 0;
+  font-size: 103.5%;
 }
 
 #app {
