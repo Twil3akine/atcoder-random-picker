@@ -87,22 +87,40 @@
   font-size: 103.5%;
 }
 
-h1 {
-  font-size: 3rem;
+html {
+  min-width: 20rem;
+  background: var(--color-base-container-default);
+  color: var(--color-base-foreground-default);
 }
 
-label {
-  font-size: 1.5rem;
+body {
+  min-width: 20rem;
+  margin: 0;
 }
 
-.container {
-  position: absolute;
-  top: 50vh;
-  left: 50vw;
-  transform: translate(-50%, -50%);
-  width: 70vw;
+#app {
+  min-height: 100dvh;
+}
+
+.app-container {
+  width: min(70vw, 36rem);
+  margin: auto;
+  padding: 2rem 0;
+}
+
+.activity-scroll {
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
 }
 
 details[open] summary span {
   transform: rotate(90deg);
+}
+
+@media (max-width: 47.999rem) {
+  .app-container {
+    width: 100%;
+    margin-block: 0;
+    padding: 1.5rem 1rem 2rem;
+  }
 }

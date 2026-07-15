@@ -256,9 +256,11 @@
   }
 </script>
 
-<div class="w-full h-full">
-  <div class="container flex flex-col max-w-xl w-full gap-2">
-    <h1 class="text-3xl mb-8">AtCoder Random Picker</h1>
+<div class="flex min-h-dvh flex-col">
+  <main class="app-container flex w-full max-w-xl flex-1 flex-col gap-2">
+    <h1 class="mb-6 text-4xl leading-tight sm:mb-8 sm:text-5xl">
+      AtCoder Random Picker
+    </h1>
 
     {#if errors.rangeError}
       <p class="text-destructive mb-2 text-sm">
@@ -414,12 +416,10 @@
       </div>
     {/if}
 
-    <div
-      class="relative left-1/2 mt-10 flex w-screen -translate-x-1/2 flex-col items-center gap-3"
-    >
+    <div class="mt-10 flex w-full flex-col items-center gap-3">
       <Label class="!text-[1.25rem] !font-normal">Activity</Label>
-      <div class="w-screen overflow-x-auto pb-1">
-        <div class="mx-auto flex w-max items-center gap-8">
+      <div class="activity-scroll w-full overflow-x-auto pb-2">
+        <div class="flex w-max min-w-full items-center justify-center gap-6 px-1 sm:gap-8">
           <div class="grid grid-flow-col grid-rows-7 gap-1">
             {#each activityCells as cell}
               <div
@@ -447,9 +447,9 @@
         </div>
       </div>
     </div>
-  </div>
+  </main>
 
-  <footer class="fixed bottom-4 left-0 flex w-full justify-center">
+  <footer class="flex w-full shrink-0 justify-center px-4 py-4">
     <a
       class="!text-[0.875rem] text-base-foreground-muted underline underline-offset-4 hover:text-base-foreground-default"
       href="https://github.com/Twil3akine/atcoder-random-picker/issues/new/choose"
