@@ -257,7 +257,7 @@
 </script>
 
 <div class="flex min-h-dvh flex-col">
-  <main class="app-container flex w-full max-w-xl flex-1 flex-col gap-2">
+  <main class="app-container flex w-full max-w-xl flex-col gap-2">
     <h1 class="mb-6 text-4xl leading-tight sm:mb-8 sm:text-5xl">
       AtCoder Random Picker
     </h1>
@@ -449,7 +449,7 @@
     </div>
   </main>
 
-  <footer class="flex w-full shrink-0 justify-center px-4 py-4">
+  <footer class="mt-auto flex w-full shrink-0 justify-center px-4 py-4 md:mt-0">
     <a
       class="!text-[0.875rem] text-base-foreground-muted underline underline-offset-4 hover:text-base-foreground-default"
       href="https://github.com/Twil3akine/atcoder-random-picker/issues/new/choose"
