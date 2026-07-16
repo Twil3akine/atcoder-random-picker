@@ -39,7 +39,7 @@
         },
         /** ボタンのサイズ */
         size: {
-          tiny: ['w-[13.5rem] py-2 min-h-7'],
+          tiny: ['min-h-9 px-3 py-2'],
           small: ['px-3 py-2 min-h-9'],
           medium: ['px-4 py-2.5 min-h-10'],
           large: ['px-8 py-3 min-h-11'],

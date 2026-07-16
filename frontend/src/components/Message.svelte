@@ -81,7 +81,7 @@
 </script>
 
 <div class={messageVariantClass}>
-  <div class={messageIconVariantClass}>
+  <div class={`${messageIconVariantClass} shrink-0`}>
     {#if variant === "error"}
       <CircleAlert size="1.5rem" />
     {:else if variant === "warning"}

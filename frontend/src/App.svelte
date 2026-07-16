@@ -256,9 +256,13 @@
   }
 </script>
 
-<div class="w-full h-full">
-  <div class="container flex flex-col max-w-xl w-full gap-2">
-    <h1 class="text-3xl mb-8">AtCoder Random Picker</h1>
+<div class="flex min-h-dvh flex-col">
+  <main class="app-container flex w-full max-w-xl flex-col gap-2">
+    <h1
+      class="mb-6 text-4xl leading-tight sm:mb-8 sm:self-center sm:whitespace-nowrap sm:text-[2.5rem] lg:text-5xl"
+    >
+      AtCoder Random Picker
+    </h1>
 
     {#if errors.rangeError}
       <p class="text-destructive mb-2 text-sm">
@@ -278,7 +282,7 @@
       </p>
     {/if}
 
-    <div class="flex items-center gap-2">
+    <div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_6rem] sm:items-center">
       <Input
         type="number"
         placeholder="最低Diffを入力してください。"
@@ -293,7 +297,7 @@
       />
       <Button
         onclick={handlePick}
-        class="shrink-0 w-24 h-12 flex justify-center items-center"
+        class="flex h-12 w-full items-center justify-center"
         disabled={loading ||
           errors.rangeError ||
           errors.isMinusMinDiff ||
@@ -311,13 +315,13 @@
     </div>
 
     <div
-      class="mt-3 flex items-center justify-between gap-2"
+      class="mt-3 flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center sm:gap-2"
       aria-label="Contest filters"
     >
-      <div class="flex flex-wrap gap-2">
+      <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
         {#each CONTEST_OPTIONS as contest}
           <label
-            class="inline-flex items-center gap-2 rounded-md border border-base-stroke-default px-3 py-2 !text-[1rem] text-base-foreground-default"
+            class="inline-flex min-h-11 items-center gap-2 rounded-md border border-base-stroke-default px-3 py-2 !text-[1rem] text-base-foreground-default"
           >
             <input
               type="checkbox"
@@ -332,7 +336,7 @@
 
       <Button
         onclick={setDefault}
-        class="shrink-0 w-24 h-12 flex justify-center items-center"
+        class="flex h-12 w-full shrink-0 items-center justify-center sm:w-24"
         variant="danger"
         tone="ghost"
       >
@@ -340,7 +344,7 @@
       </Button>
     </div>
 
-    <div class="grid grid-cols-2 gap-2 mt-3">
+    <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
       <Input
         type="number"
         min="1"
@@ -368,7 +372,7 @@
             <p class="text-base-foreground-default mb-1 text-sm">
               URL:
               <a
-                class="text-blue-600 underline"
+                class="break-all text-blue-600 underline"
                 href={`https://atcoder.jp/contests/${result.contest_id}/tasks/${result.id}`}
                 target="_blank"
               >
@@ -381,7 +385,7 @@
               size="tiny"
               variant="danger"
               tone="ghost"
-              class="mt-8"
+              class="mt-8 w-full sm:w-[13.5rem]"
               onclick={toggleDialog}>Show Difficulty</Button
             >
             <Dialog
@@ -414,12 +418,10 @@
       </div>
     {/if}
 
-    <div
-      class="relative left-1/2 mt-10 flex w-screen -translate-x-1/2 flex-col items-center gap-3"
-    >
+    <div class="mt-10 flex w-full flex-col items-center gap-3">
       <Label class="!text-[1.25rem] !font-normal">Activity</Label>
-      <div class="w-screen overflow-x-auto pb-1">
-        <div class="mx-auto flex w-max items-center gap-8">
+      <div class="activity-scroll w-full overflow-x-auto pb-2">
+        <div class="flex w-max min-w-full items-center justify-center gap-6 px-1 sm:gap-8">
           <div class="grid grid-flow-col grid-rows-7 gap-1">
             {#each activityCells as cell}
               <div
@@ -447,9 +449,9 @@
         </div>
       </div>
     </div>
-  </div>
+  </main>
 
-  <footer class="fixed bottom-4 left-0 flex w-full justify-center">
+  <footer class="mt-auto flex w-full shrink-0 justify-center px-4 py-4 sm:mt-0">
     <a
       class="!text-[0.875rem] text-base-foreground-muted underline underline-offset-4 hover:text-base-foreground-default"
       href="https://github.com/Twil3akine/atcoder-random-picker/issues/new/choose"
