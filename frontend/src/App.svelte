@@ -1,5 +1,6 @@
 <script lang="ts">
   import Button from "./components/Button.svelte";
+  import AdSenseUnit from "./components/AdSenseUnit.svelte";
   import Dialog from "./components/Dialog.svelte";
   import Input from "./components/Input.svelte";
   import Label from "./components/Label.svelte";
@@ -449,7 +450,10 @@
         </div>
       </div>
     </div>
+
   </main>
+
+  <AdSenseUnit />
 
   <footer class="mt-auto flex w-full shrink-0 justify-center px-4 py-4 sm:mt-0">
     <a
