@@ -115,7 +115,7 @@ details[open] summary span {
   transform: rotate(90deg);
 }
 
-@media (max-width: 47.999rem) {
+@media (max-width: 39.999rem) {
   .app-container {
     width: 100%;
     margin-block: 0;
