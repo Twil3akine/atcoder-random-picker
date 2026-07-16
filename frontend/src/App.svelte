@@ -5,6 +5,7 @@
   import Input from "./components/Input.svelte";
   import Label from "./components/Label.svelte";
   import Message from "./components/Message.svelte";
+  import PickHistory from "./components/PickHistory.svelte";
 
   import { Loader } from "@lucide/svelte";
   import {
@@ -16,8 +17,13 @@
     cacheInput,
     loadLastInput,
     loadPickActivity,
+    loadPickHistory,
     recordPickActivity,
+    recordPickHistory,
+    removePickHistoryEntry,
+    clearPickHistory,
     type PickActivity,
+    type PickHistoryEntry,
   } from "./utils/cacher";
 
   // ============================================================
@@ -66,6 +72,7 @@
   let errorMessage = $state<string | null>(null); // 取得できなかった場合に入るエラー
   let loading = $state<boolean>(false); // 問題を取得中か否か
   let pickActivity = $state<PickActivity>(loadPickActivity());
+  let pickHistory = $state<PickHistoryEntry[]>(loadPickHistory());
   let selectedActivityYear = $state<number>(new Date().getFullYear());
   let activityYears = $derived(buildActivityYears(pickActivity));
   let activityCells = $derived(
@@ -128,6 +135,7 @@
 
       setTimeout(() => {
         pickActivity = recordPickActivity();
+        pickHistory = recordPickHistory(json);
         result = json;
         loading = false;
       }, 1050);
@@ -188,6 +196,14 @@
       contest_from: "212",
       contest_to: "",
     });
+  };
+
+  const removeHistoryEntry = (entryId: string): void => {
+    pickHistory = removePickHistoryEntry(entryId);
+  };
+
+  const removeAllHistory = (): void => {
+    pickHistory = clearPickHistory();
   };
 
   function getDateKey(date: Date): string {
@@ -397,7 +413,9 @@
               onClick={(result) => clickDialog(result)}
             >
               <Label class="!text-lg !font-semibold"
-                >Difficulty: {Math.floor(result!.difficulty)}</Label
+                >Difficulty: {result.difficulty === null
+                  ? "Unknown"
+                  : Math.floor(result.difficulty)}</Label
               >
             </Dialog>
           </div>
@@ -418,6 +436,12 @@
         </Message>
       </div>
     {/if}
+
+    <PickHistory
+      history={pickHistory}
+      onRemove={removeHistoryEntry}
+      onClear={removeAllHistory}
+    />
 
     <div class="mt-10 flex w-full flex-col items-center gap-3">
       <Label class="!text-[1.25rem] !font-normal">Activity</Label>

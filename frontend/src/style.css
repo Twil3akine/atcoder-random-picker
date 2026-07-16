@@ -111,7 +111,12 @@ body {
   scrollbar-width: thin;
 }
 
-details[open] summary span {
+.details-chevron {
+  display: inline-block;
+  transition: transform 150ms ease;
+}
+
+details[open] .details-chevron {
   transform: rotate(90deg);
 }
 

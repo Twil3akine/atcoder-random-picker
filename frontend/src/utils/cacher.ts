@@ -1,3 +1,5 @@
+import type { Problem } from "./types";
+
 export type CachedInput = {
   min: number | "";
   max: number | "";
@@ -8,8 +10,14 @@ export type CachedInput = {
 
 const rangeKey: string = 'lastDiff';
 const activityKey: string = 'pickActivity';
+const historyKey: string = "pickHistory";
+const maxHistoryEntries = 50;
 
 export type PickActivity = Record<string, number>;
+export type PickHistoryEntry = Problem & {
+  entryId: string;
+  pickedAt: string;
+};
 
 export const cacheInput = (input: CachedInput): void => {
   localStorage.setItem(rangeKey, JSON.stringify(input));
@@ -75,4 +83,79 @@ export const recordPickActivity = (date = new Date()): PickActivity => {
   localStorage.setItem(activityKey, JSON.stringify(nextActivity));
 
   return nextActivity;
+};
+
+const isPickHistoryEntry = (value: unknown): value is PickHistoryEntry => {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  const entry = value as Partial<PickHistoryEntry>;
+
+  return (
+    typeof entry.entryId === "string" &&
+    typeof entry.pickedAt === "string" &&
+    !Number.isNaN(Date.parse(entry.pickedAt)) &&
+    typeof entry.id === "string" &&
+    typeof entry.contest_id === "string" &&
+    typeof entry.name === "string" &&
+    (entry.difficulty === null ||
+      (typeof entry.difficulty === "number" &&
+        Number.isFinite(entry.difficulty)))
+  );
+};
+
+export const loadPickHistory = (): PickHistoryEntry[] => {
+  const data = localStorage.getItem(historyKey);
+
+  if (!data) {
+    return [];
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(data);
+
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed.filter(isPickHistoryEntry).slice(0, maxHistoryEntries);
+  } catch {
+    return [];
+  }
+};
+
+export const recordPickHistory = (
+  problem: Problem,
+  date = new Date(),
+): PickHistoryEntry[] => {
+  const entry: PickHistoryEntry = {
+    ...problem,
+    entryId: `${date.getTime()}-${Math.random().toString(36).slice(2)}`,
+    pickedAt: date.toISOString(),
+  };
+  const nextHistory = [entry, ...loadPickHistory()].slice(
+    0,
+    maxHistoryEntries,
+  );
+
+  localStorage.setItem(historyKey, JSON.stringify(nextHistory));
+
+  return nextHistory;
+};
+
+export const removePickHistoryEntry = (entryId: string): PickHistoryEntry[] => {
+  const nextHistory = loadPickHistory().filter(
+    (entry) => entry.entryId !== entryId,
+  );
+
+  localStorage.setItem(historyKey, JSON.stringify(nextHistory));
+
+  return nextHistory;
+};
+
+export const clearPickHistory = (): PickHistoryEntry[] => {
+  localStorage.removeItem(historyKey);
+
+  return [];
 };
