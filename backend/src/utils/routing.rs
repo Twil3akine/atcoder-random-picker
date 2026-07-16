@@ -3,7 +3,7 @@ use core::prelude::v1::derive;
 use hyper::{header, Body, Request, Response, StatusCode};
 use rand::seq::IteratorRandom;
 use serde::Serialize;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::convert::{From, Infallible};
 use std::iter::Iterator;
 use std::option::Option::None;
@@ -15,6 +15,7 @@ use std::vec::Vec;
 use crate::utils::api::{Problem, ProblemModel};
 
 const MIN_DIFFICULTY: f64 = 0.0;
+const MAX_EXCLUDED_PROBLEMS: usize = 20;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -111,6 +112,38 @@ fn parse_optional_u32(params: &HashMap<String, String>, key: &str) -> Result<Opt
         .map(Option::flatten)
 }
 
+fn parse_excluded_problem_ids(params: &HashMap<String, String>) -> Result<HashSet<String>, String> {
+    let excluded = params
+        .get("exclude")
+        .map(|value| {
+            value
+                .split(',')
+                .map(str::trim)
+                .filter(|id| !id.is_empty())
+                .map(ToString::to_string)
+                .collect::<HashSet<String>>()
+        })
+        .unwrap_or_default();
+
+    if excluded.len() > MAX_EXCLUDED_PROBLEMS {
+        return Err(format!(
+            "'exclude' cannot contain more than {} problem IDs.",
+            MAX_EXCLUDED_PROBLEMS
+        ));
+    }
+
+    if excluded.iter().any(|id| {
+        id.len() > 100
+            || !id.chars().all(|character| {
+                character.is_ascii_alphanumeric() || matches!(character, '_' | '-')
+            })
+    }) {
+        return Err("'exclude' contains an invalid problem ID.".to_string());
+    }
+
+    Ok(excluded)
+}
+
 fn log(now: DateTime<Local>, method: &str, path: &str, status: StatusCode) {
     println!(
         "[{}] {} {} -> {}",
@@ -195,6 +228,10 @@ pub async fn router(
                 Ok(contest_to) => contest_to,
                 Err(message) => return Ok(bad_request(&message)),
             };
+            let excluded_problem_ids = match parse_excluded_problem_ids(&params) {
+                Ok(excluded) => excluded,
+                Err(message) => return Ok(bad_request(&message)),
+            };
 
             if min > max {
                 return Ok(bad_request("'min' cannot be greater than 'max'."));
@@ -213,9 +250,7 @@ pub async fn router(
                 ));
             }
 
-            let mut rng = rand::thread_rng();
-
-            let selected = state
+            let candidates = state
                 .problems
                 .iter()
                 .filter(|p| {
@@ -262,6 +297,13 @@ pub async fn router(
                             _ => None,
                         })
                 })
+                .collect::<Vec<ProblemResponse>>();
+
+            let had_candidates_before_exclusion = !candidates.is_empty();
+            let mut rng = rand::thread_rng();
+            let selected = candidates
+                .into_iter()
+                .filter(|problem| !excluded_problem_ids.contains(&problem.id))
                 .choose(&mut rng);
 
             match selected {
@@ -270,8 +312,15 @@ pub async fn router(
                     Ok(with_cors_headers(Response::new(Body::from(body))))
                 }
                 None => {
+                    let message = if had_candidates_before_exclusion
+                        && !excluded_problem_ids.is_empty()
+                    {
+                        "履歴内の問題を除外すると、条件に一致する問題がありません。除外をOFFにするか、履歴を削除してください"
+                    } else {
+                        "指定Diff範囲に該当する問題がありませんでした"
+                    };
                     let error_body = serde_json::to_string(&ErrorResponse {
-                        message: "指定Diff範囲に該当する問題がありませんでした".to_string(),
+                        message: message.to_string(),
                     })
                     .unwrap();
 

@@ -141,6 +141,91 @@ async fn test_not_found_problem() {
 }
 
 #[tokio::test]
+async fn test_excluded_problem_is_not_selected() {
+    let (status, body) = build_and_send(
+        Method::GET,
+        "/?min=800&max=1000&contest=abc&contest_from=212&contest_to=213&exclude=abc212_a",
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
+    #[derive(serde::Deserialize)]
+    struct ProblemResponse {
+        id: String,
+    }
+
+    let problem: ProblemResponse = serde_json::from_str(&body).unwrap();
+    assert_eq!(problem.id, "abc213_a");
+}
+
+#[tokio::test]
+async fn test_all_matching_problems_excluded_returns_specific_message() {
+    let (status, body) = build_and_send(
+        Method::GET,
+        "/?min=800&max=1000&contest=abc&contest_from=212&contest_to=213&exclude=abc212_a,abc213_a",
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+
+    #[derive(serde::Deserialize)]
+    struct ErrorResponse {
+        message: String,
+    }
+
+    let error: ErrorResponse = serde_json::from_str(&body).unwrap();
+    assert_eq!(
+        error.message,
+        "履歴内の問題を除外すると、条件に一致する問題がありません。除外をOFFにするか、履歴を削除してください"
+    );
+}
+
+#[tokio::test]
+async fn test_empty_exclude_is_ignored() {
+    let (status, _) = build_and_send(Method::GET, "/?min=900&max=900&exclude=").await;
+    assert_eq!(status, StatusCode::OK);
+}
+
+#[tokio::test]
+async fn test_duplicate_excluded_problem_ids_count_once() {
+    let excluded = std::iter::repeat("abc212_a")
+        .take(21)
+        .collect::<Vec<_>>()
+        .join(",");
+    let path = format!("/?min=850&max=850&exclude={excluded}");
+    let (status, body) = build_and_send(Method::GET, &path).await;
+    assert_eq!(status, StatusCode::OK);
+
+    #[derive(serde::Deserialize)]
+    struct ProblemResponse {
+        id: String,
+    }
+
+    let problem: ProblemResponse = serde_json::from_str(&body).unwrap();
+    assert_eq!(problem.id, "abc213_a");
+}
+
+#[tokio::test]
+async fn test_more_than_twenty_excluded_problem_ids_is_bad_request() {
+    let excluded = (0..21)
+        .map(|index| format!("abc{index:03}_a"))
+        .collect::<Vec<_>>()
+        .join(",");
+    let path = format!("/?exclude={excluded}");
+    let (status, body) = build_and_send(Method::GET, &path).await;
+
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(body, "'exclude' cannot contain more than 20 problem IDs.");
+}
+
+#[tokio::test]
+async fn test_invalid_excluded_problem_id_is_bad_request() {
+    let (status, body) = build_and_send(Method::GET, "/?exclude=abc212%2Fa").await;
+
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(body, "'exclude' contains an invalid problem ID.");
+}
+
+#[tokio::test]
 async fn test_min_greater_than_max() {
     let (status, body) = build_and_send(Method::GET, "/?min=1500&max=500").await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
