@@ -6,6 +6,7 @@
   import Label from "./components/Label.svelte";
   import Message from "./components/Message.svelte";
   import PickHistory from "./components/PickHistory.svelte";
+  import SavedProblems from "./components/SavedProblems.svelte";
 
   import { Loader } from "@lucide/svelte";
   import {
@@ -24,8 +25,14 @@
     removePickHistoryEntry,
     clearPickHistory,
     saveHistoryExclusionEnabled,
+    loadSavedProblems,
+    saveProblem,
+    removeSavedProblem,
+    clearSavedProblems,
+    MAX_SAVED_PROBLEMS,
     type PickActivity,
     type PickHistoryEntry,
+    type SavedProblem,
   } from "./utils/cacher";
 
   // ============================================================
@@ -75,6 +82,13 @@
   let loading = $state<boolean>(false); // 問題を取得中か否か
   let pickActivity = $state<PickActivity>(loadPickActivity());
   let pickHistory = $state<PickHistoryEntry[]>(loadPickHistory());
+  let savedProblems = $state<SavedProblem[]>(loadSavedProblems());
+  let savedProblemIds = $derived(
+    new Set(savedProblems.map((problem) => problem.id)),
+  );
+  let savedListIsFull = $derived(
+    savedProblems.length >= MAX_SAVED_PROBLEMS,
+  );
   let historyExclusionEnabled = $state<boolean>(
     loadHistoryExclusionEnabled(),
   );
@@ -219,6 +233,18 @@
 
   const updateHistoryExclusion = (enabled: boolean): void => {
     historyExclusionEnabled = saveHistoryExclusionEnabled(enabled);
+  };
+
+  const removeProblemFromSavedList = (problemId: string): void => {
+    savedProblems = removeSavedProblem(problemId);
+  };
+
+  const addProblemToSavedList = (problem: Problem): void => {
+    savedProblems = saveProblem(problem);
+  };
+
+  const removeAllSavedProblems = (): void => {
+    savedProblems = clearSavedProblems();
   };
 
   function getDateKey(date: Date): string {
@@ -430,14 +456,28 @@
               </a>
             </p>
 
-            <!-- Diff表示 -->
-            <Button
-              size="tiny"
-              variant="danger"
-              tone="ghost"
-              class="mt-8 w-full sm:w-[13.5rem]"
-              onclick={toggleDialog}>Show Difficulty</Button
-            >
+            <div class="mt-8 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <!-- Diff表示 -->
+              <Button
+                variant="danger"
+                tone="ghost"
+                class="min-h-11 w-full"
+                onclick={toggleDialog}>Show Difficulty</Button
+              >
+              <Button
+                variant="secondary"
+                tone="solid"
+                class="min-h-11 w-full"
+                disabled={savedProblemIds.has(result.id) || savedListIsFull}
+                onclick={() => addProblemToSavedList(result!)}
+              >
+                {savedProblemIds.has(result.id)
+                  ? "保存済み"
+                  : savedListIsFull
+                    ? "上限到達"
+                    : "保存"}
+              </Button>
+            </div>
             <Dialog
               class="max-w-lg w-[80vw] m-auto"
               enableClose
@@ -472,8 +512,17 @@
 
     <PickHistory
       history={pickHistory}
+      {savedProblemIds}
+      {savedListIsFull}
+      onSave={addProblemToSavedList}
       onRemove={removeHistoryEntry}
       onClear={removeAllHistory}
+    />
+
+    <SavedProblems
+      {savedProblems}
+      onRemove={removeProblemFromSavedList}
+      onClear={removeAllSavedProblems}
     />
 
     <div class="mt-10 flex w-full flex-col items-center gap-3">
