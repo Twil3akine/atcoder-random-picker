@@ -451,8 +451,9 @@
       </div>
     </div>
 
-    <AdSenseUnit />
   </main>
+
+  <AdSenseUnit />
 
   <footer class="mt-auto flex w-full shrink-0 justify-center px-4 py-4 sm:mt-0">
     <a
