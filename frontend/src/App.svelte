@@ -6,6 +6,7 @@
   import Label from "./components/Label.svelte";
   import Message from "./components/Message.svelte";
   import PickHistory from "./components/PickHistory.svelte";
+  import SavedProblems from "./components/SavedProblems.svelte";
 
   import { Loader } from "@lucide/svelte";
   import {
@@ -24,8 +25,12 @@
     removePickHistoryEntry,
     clearPickHistory,
     saveHistoryExclusionEnabled,
+    loadSavedProblems,
+    removeSavedProblem,
+    clearSavedProblems,
     type PickActivity,
     type PickHistoryEntry,
+    type SavedProblem,
   } from "./utils/cacher";
 
   // ============================================================
@@ -75,6 +80,7 @@
   let loading = $state<boolean>(false); // 問題を取得中か否か
   let pickActivity = $state<PickActivity>(loadPickActivity());
   let pickHistory = $state<PickHistoryEntry[]>(loadPickHistory());
+  let savedProblems = $state<SavedProblem[]>(loadSavedProblems());
   let historyExclusionEnabled = $state<boolean>(
     loadHistoryExclusionEnabled(),
   );
@@ -219,6 +225,14 @@
 
   const updateHistoryExclusion = (enabled: boolean): void => {
     historyExclusionEnabled = saveHistoryExclusionEnabled(enabled);
+  };
+
+  const removeProblemFromSavedList = (problemId: string): void => {
+    savedProblems = removeSavedProblem(problemId);
+  };
+
+  const removeAllSavedProblems = (): void => {
+    savedProblems = clearSavedProblems();
   };
 
   function getDateKey(date: Date): string {
@@ -474,6 +488,12 @@
       history={pickHistory}
       onRemove={removeHistoryEntry}
       onClear={removeAllHistory}
+    />
+
+    <SavedProblems
+      {savedProblems}
+      onRemove={removeProblemFromSavedList}
+      onClear={removeAllSavedProblems}
     />
 
     <div class="mt-10 flex w-full flex-col items-center gap-3">
