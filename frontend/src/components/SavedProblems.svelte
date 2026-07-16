@@ -75,10 +75,7 @@
                   {problem.name}
                 </a>
                 <p class="mt-1 !text-xs leading-relaxed text-base-foreground-muted">
-                  {problem.contest_id.toUpperCase()} · Diff {problem.difficulty === null
-                    ? "不明"
-                    : Math.floor(problem.difficulty)} ·
-                  {formatSavedAt(problem.savedAt)}
+                  {problem.contest_id.toUpperCase()} · {formatSavedAt(problem.savedAt)}
                 </p>
               </div>
 

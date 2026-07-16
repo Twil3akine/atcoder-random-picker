@@ -92,10 +92,7 @@
                   {entry.name}
                 </a>
                 <p class="mt-1 !text-xs text-base-foreground-muted">
-                  {entry.contest_id.toUpperCase()} · Diff {entry.difficulty === null
-                    ? "不明"
-                    : Math.floor(entry.difficulty)} ·
-                  {formatPickedAt(entry.pickedAt)}
+                  {entry.contest_id.toUpperCase()} · {formatPickedAt(entry.pickedAt)}
                 </p>
               </div>
 
