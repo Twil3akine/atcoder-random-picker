@@ -6,11 +6,21 @@
 
   type Props = {
     history: PickHistoryEntry[];
+    savedProblemIds: Set<string>;
+    savedListIsFull: boolean;
+    onSave: (problem: PickHistoryEntry) => void;
     onRemove: (entryId: string) => void;
     onClear: () => void;
   };
 
-  let { history, onRemove, onClear }: Props = $props();
+  let {
+    history,
+    savedProblemIds,
+    savedListIsFull,
+    onSave,
+    onRemove,
+    onClear,
+  }: Props = $props();
 
   const dateFormatter = new Intl.DateTimeFormat("ja-JP", {
     month: "numeric",
@@ -26,6 +36,14 @@
     if (window.confirm("選出履歴をすべて削除しますか？")) {
       onClear();
     }
+  };
+
+  const saveLabel = (problemId: string): string => {
+    if (savedProblemIds.has(problemId)) {
+      return "保存済み";
+    }
+
+    return savedListIsFull ? "上限到達" : "保存";
   };
 </script>
 
@@ -81,14 +99,25 @@
                 </p>
               </div>
 
-              <button
-                type="button"
-                class="flex min-h-10 shrink-0 cursor-pointer items-center rounded-md px-2 !text-xs text-base-foreground-muted hover:bg-base-container-muted hover:text-base-foreground-default"
-                aria-label={`${entry.name}を履歴から削除`}
-                onclick={() => onRemove(entry.entryId)}
-              >
-                削除
-              </button>
+              <div class="flex shrink-0 flex-col gap-1 sm:flex-row">
+                <button
+                  type="button"
+                  class="flex min-h-11 cursor-pointer items-center rounded-md px-2 !text-xs text-primary hover:bg-primary/10 disabled:cursor-default disabled:opacity-50"
+                  aria-label={`${entry.name}を保存`}
+                  disabled={savedProblemIds.has(entry.id) || savedListIsFull}
+                  onclick={() => onSave(entry)}
+                >
+                  {saveLabel(entry.id)}
+                </button>
+                <button
+                  type="button"
+                  class="flex min-h-11 cursor-pointer items-center rounded-md px-2 !text-xs text-base-foreground-muted hover:bg-base-container-muted hover:text-base-foreground-default"
+                  aria-label={`${entry.name}を履歴から削除`}
+                  onclick={() => onRemove(entry.entryId)}
+                >
+                  削除
+                </button>
+              </div>
             </li>
           {/each}
         </ol>
