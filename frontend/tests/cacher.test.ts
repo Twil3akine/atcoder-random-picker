@@ -1,13 +1,19 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import {
   MAX_PICK_HISTORY_ENTRIES,
+  MAX_SAVED_PROBLEMS,
   clearPickHistory,
+  clearSavedProblems,
   loadHistoryExclusionEnabled,
   loadPickHistory,
+  loadSavedProblems,
   recordPickHistory,
   removePickHistoryEntry,
+  removeSavedProblem,
+  saveProblem,
   saveHistoryExclusionEnabled,
   type PickHistoryEntry,
+  type SavedProblem,
 } from "../src/utils/cacher";
 import type { Problem } from "../src/utils/types";
 
@@ -50,6 +56,11 @@ const historyEntry = (index: number): PickHistoryEntry => ({
   ...problem(index),
   entryId: `entry-${index}`,
   pickedAt: new Date(2026, 0, index + 1).toISOString(),
+});
+
+const savedProblem = (index: number): SavedProblem => ({
+  ...problem(index),
+  savedAt: new Date(2026, 0, index + 1).toISOString(),
 });
 
 beforeEach(() => {
@@ -116,5 +127,74 @@ describe("history exclusion setting", () => {
 
     saveHistoryExclusionEnabled(true);
     expect(loadHistoryExclusionEnabled()).toBe(true);
+  });
+});
+
+describe("saved problems", () => {
+  test("saves unique problems in newest-first order", () => {
+    saveProblem(problem(1), new Date(2026, 0, 1));
+    saveProblem(problem(2), new Date(2026, 0, 2));
+    saveProblem(problem(1), new Date(2026, 0, 3));
+
+    const savedProblems = loadSavedProblems();
+
+    expect(savedProblems.map((saved) => saved.id)).toEqual([
+      "abc002_a",
+      "abc001_a",
+    ]);
+    expect(savedProblems[1]?.savedAt).toBe(
+      new Date(2026, 0, 1).toISOString(),
+    );
+  });
+
+  test("refuses the two-hundred-fifty-sixth problem without deleting existing items", () => {
+    for (let index = 0; index < MAX_SAVED_PROBLEMS; index += 1) {
+      saveProblem(problem(index), new Date(2026, 0, index + 1));
+    }
+
+    const beforeLimit = loadSavedProblems();
+    const afterLimit = saveProblem(problem(MAX_SAVED_PROBLEMS));
+
+    expect(beforeLimit).toHaveLength(MAX_SAVED_PROBLEMS);
+    expect(afterLimit).toEqual(beforeLimit);
+    expect(afterLimit.some((saved) => saved.id === "abc255_a")).toBe(false);
+  });
+
+  test("removes one saved problem or clears the complete list", () => {
+    saveProblem(problem(1));
+    saveProblem(problem(2));
+
+    expect(removeSavedProblem("abc002_a").map((saved) => saved.id)).toEqual([
+      "abc001_a",
+    ]);
+    expect(clearSavedProblems()).toEqual([]);
+    expect(loadSavedProblems()).toEqual([]);
+  });
+
+  test("filters invalid items and supports an unknown difficulty", () => {
+    const unknownDifficulty = {
+      ...savedProblem(1),
+      difficulty: null,
+    };
+    localStorage.setItem(
+      "savedProblems",
+      JSON.stringify({
+        version: 1,
+        items: [unknownDifficulty, unknownDifficulty, { id: "invalid" }],
+      }),
+    );
+
+    expect(loadSavedProblems()).toEqual([unknownDifficulty]);
+  });
+
+  test("ignores malformed and unsupported saved problem data", () => {
+    localStorage.setItem("savedProblems", "not-json");
+    expect(loadSavedProblems()).toEqual([]);
+
+    localStorage.setItem(
+      "savedProblems",
+      JSON.stringify({ version: 999, items: [savedProblem(1)] }),
+    );
+    expect(loadSavedProblems()).toEqual([]);
   });
 });

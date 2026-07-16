@@ -13,18 +13,29 @@ const activityKey: string = 'pickActivity';
 const historyKey: string = "pickHistory";
 const historyExclusionKey: string = "pickHistoryExclusionEnabled";
 const pickHistoryVersion = 1;
+const savedProblemsKey = "savedProblems";
+const savedProblemsVersion = 1;
 
 export const MAX_PICK_HISTORY_ENTRIES = 20;
+export const MAX_SAVED_PROBLEMS = 255;
 
 export type PickActivity = Record<string, number>;
 export type PickHistoryEntry = Problem & {
   entryId: string;
   pickedAt: string;
 };
+export type SavedProblem = Problem & {
+  savedAt: string;
+};
 
 type PickHistoryStorage = {
   version: typeof pickHistoryVersion;
   entries: PickHistoryEntry[];
+};
+
+type SavedProblemsStorage = {
+  version: typeof savedProblemsVersion;
+  items: SavedProblem[];
 };
 
 export const cacheInput = (input: CachedInput): void => {
@@ -110,6 +121,25 @@ const isPickHistoryEntry = (value: unknown): value is PickHistoryEntry => {
     (entry.difficulty === null ||
       (typeof entry.difficulty === "number" &&
         Number.isFinite(entry.difficulty)))
+  );
+};
+
+const isSavedProblem = (value: unknown): value is SavedProblem => {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  const item = value as Partial<SavedProblem>;
+
+  return (
+    typeof item.savedAt === "string" &&
+    !Number.isNaN(Date.parse(item.savedAt)) &&
+    typeof item.id === "string" &&
+    typeof item.contest_id === "string" &&
+    typeof item.name === "string" &&
+    (item.difficulty === null ||
+      (typeof item.difficulty === "number" &&
+        Number.isFinite(item.difficulty)))
   );
 };
 
@@ -199,4 +229,88 @@ export const saveHistoryExclusionEnabled = (enabled: boolean): boolean => {
   localStorage.setItem(historyExclusionKey, String(enabled));
 
   return enabled;
+};
+
+const persistSavedProblems = (items: SavedProblem[]): SavedProblem[] => {
+  const storedItems = items.slice(0, MAX_SAVED_PROBLEMS);
+  const storedProblems: SavedProblemsStorage = {
+    version: savedProblemsVersion,
+    items: storedItems,
+  };
+
+  localStorage.setItem(savedProblemsKey, JSON.stringify(storedProblems));
+
+  return storedItems;
+};
+
+export const loadSavedProblems = (): SavedProblem[] => {
+  const data = localStorage.getItem(savedProblemsKey);
+
+  if (!data) {
+    return [];
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(data);
+
+    if (
+      typeof parsed !== "object" ||
+      parsed === null ||
+      !("version" in parsed) ||
+      parsed.version !== savedProblemsVersion ||
+      !("items" in parsed) ||
+      !Array.isArray(parsed.items)
+    ) {
+      return [];
+    }
+
+    const problemIds = new Set<string>();
+
+    return parsed.items.filter(isSavedProblem).filter((problem) => {
+      if (
+        problemIds.size >= MAX_SAVED_PROBLEMS ||
+        problemIds.has(problem.id)
+      ) {
+        return false;
+      }
+
+      problemIds.add(problem.id);
+      return true;
+    });
+  } catch {
+    return [];
+  }
+};
+
+export const saveProblem = (
+  problem: Problem,
+  date = new Date(),
+): SavedProblem[] => {
+  const savedProblems = loadSavedProblems();
+
+  if (
+    savedProblems.length >= MAX_SAVED_PROBLEMS ||
+    savedProblems.some((savedProblem) => savedProblem.id === problem.id)
+  ) {
+    return savedProblems;
+  }
+
+  return persistSavedProblems([
+    {
+      ...problem,
+      savedAt: date.toISOString(),
+    },
+    ...savedProblems,
+  ]);
+};
+
+export const removeSavedProblem = (problemId: string): SavedProblem[] =>
+  persistSavedProblems(
+    loadSavedProblems().filter((problem) => problem.id !== problemId),
+  );
+
+export const clearSavedProblems = (): SavedProblem[] => {
+  localStorage.removeItem(savedProblemsKey);
+
+  return [];
 };
