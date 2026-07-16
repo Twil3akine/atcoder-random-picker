@@ -170,7 +170,27 @@ fn with_cors_headers(mut res: Response<Body>) -> Response<Body> {
     res
 }
 
-fn standard_contest_number(contest_id: &str) -> Option<u32> {
+fn standard_contest_id(problem_id: &str) -> Option<&str> {
+    let (contest_id, _) = problem_id.rsplit_once('_')?;
+
+    for prefix in ["abc", "arc", "agc"] {
+        if let Some(number) = contest_id.strip_prefix(prefix) {
+            if number.parse::<u32>().is_ok() {
+                return Some(contest_id);
+            }
+        }
+    }
+
+    None
+}
+
+fn canonical_contest_id<'a>(problem_id: &'a str, contest_id: &'a str) -> &'a str {
+    standard_contest_id(problem_id).unwrap_or(contest_id)
+}
+
+fn standard_contest_number(problem_id: &str) -> Option<u32> {
+    let contest_id = standard_contest_id(problem_id)?;
+
     for prefix in ["abc", "arc", "agc"] {
         if let Some(number) = contest_id.strip_prefix(prefix) {
             return number.parse().ok();
@@ -254,23 +274,25 @@ pub async fn router(
                 .problems
                 .iter()
                 .filter(|p| {
+                    let contest_id = canonical_contest_id(&p.id, &p.contest_id);
+
                     if contest_filters.is_empty() {
                         return true;
                     }
                     contest_filters.iter().any(|filter| match filter {
-                        Contest::ABC => p.contest_id.starts_with("abc"),
-                        Contest::ARC => p.contest_id.starts_with("arc"),
-                        Contest::AGC => p.contest_id.starts_with("agc"),
+                        Contest::ABC => contest_id.starts_with("abc"),
+                        Contest::ARC => contest_id.starts_with("arc"),
+                        Contest::AGC => contest_id.starts_with("agc"),
                         Contest::Other => {
-                            !p.contest_id.starts_with("abc")
-                                && !p.contest_id.starts_with("arc")
-                                && !p.contest_id.starts_with("agc")
+                            !contest_id.starts_with("abc")
+                                && !contest_id.starts_with("arc")
+                                && !contest_id.starts_with("agc")
                         }
-                        Contest::Prefix(s) => p.contest_id.starts_with(s),
+                        Contest::Prefix(s) => contest_id.starts_with(s),
                     })
                 })
                 .filter(|p| {
-                    let Some(number) = standard_contest_number(&p.contest_id) else {
+                    let Some(number) = standard_contest_number(&p.id) else {
                         return contest_from.is_none() && contest_to.is_none();
                     };
 
@@ -284,13 +306,13 @@ pub async fn router(
                         .and_then(|m| match m.difficulty {
                             Some(diff) if min <= diff && diff <= max => Some(ProblemResponse {
                                 id: p.id.clone(),
-                                contest_id: p.contest_id.clone(),
+                                contest_id: canonical_contest_id(&p.id, &p.contest_id).to_string(),
                                 name: p.name.clone(),
                                 difficulty: Some(diff),
                             }),
                             None if allows_unknown_difficulty => Some(ProblemResponse {
                                 id: p.id.clone(),
-                                contest_id: p.contest_id.clone(),
+                                contest_id: canonical_contest_id(&p.id, &p.contest_id).to_string(),
                                 name: p.name.clone(),
                                 difficulty: None,
                             }),

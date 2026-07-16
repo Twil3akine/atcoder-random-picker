@@ -34,6 +34,12 @@ fn build_test_state() -> Arc<AppState> {
         },
     );
     problem_models.insert(
+        "abc212_b".to_string(),
+        ProblemModel {
+            difficulty: Some(925.0),
+        },
+    );
+    problem_models.insert(
         "abc213_a".to_string(),
         ProblemModel {
             difficulty: Some(850.0),
@@ -73,6 +79,11 @@ fn build_test_state() -> Arc<AppState> {
             id: "abc212_a".to_string(),
             contest_id: "abc212".to_string(),
             name: "A - Alloy".to_string(),
+        },
+        Problem {
+            id: "abc212_b".to_string(),
+            contest_id: "adt_all_20260615_2".to_string(),
+            name: "B - Weak Password".to_string(),
         },
         Problem {
             id: "abc213_a".to_string(),
@@ -144,7 +155,7 @@ async fn test_not_found_problem() {
 async fn test_excluded_problem_is_not_selected() {
     let (status, body) = build_and_send(
         Method::GET,
-        "/?min=800&max=1000&contest=abc&contest_from=212&contest_to=213&exclude=abc212_a",
+        "/?min=800&max=900&contest=abc&contest_from=212&contest_to=213&exclude=abc212_a",
     )
     .await;
     assert_eq!(status, StatusCode::OK);
@@ -162,7 +173,7 @@ async fn test_excluded_problem_is_not_selected() {
 async fn test_all_matching_problems_excluded_returns_specific_message() {
     let (status, body) = build_and_send(
         Method::GET,
-        "/?min=800&max=1000&contest=abc&contest_from=212&contest_to=213&exclude=abc212_a,abc213_a",
+        "/?min=800&max=900&contest=abc&contest_from=212&contest_to=213&exclude=abc212_a,abc213_a",
     )
     .await;
     assert_eq!(status, StatusCode::NOT_FOUND);
@@ -291,7 +302,7 @@ async fn test_random_range() {
 async fn test_contest_number_from() {
     let (status, body) = build_and_send(
         Method::GET,
-        "/?min=0&max=1500&contest=abc&contest_from=212&contest_to=212",
+        "/?min=900&max=900&contest=abc&contest_from=212&contest_to=212",
     )
     .await;
     assert_eq!(status, StatusCode::OK);
@@ -305,6 +316,27 @@ async fn test_contest_number_from() {
     let problem: ProblemResponse = serde_json::from_str(&body).unwrap();
 
     assert_eq!(problem.id, "abc212_a");
+    assert_eq!(problem.contest_id, "abc212");
+}
+
+#[tokio::test]
+async fn test_reused_problem_uses_its_canonical_standard_contest() {
+    let (status, body) = build_and_send(
+        Method::GET,
+        "/?min=925&max=925&contest=abc&contest_from=212&contest_to=212",
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
+    #[derive(serde::Deserialize)]
+    struct ProblemResponse {
+        id: String,
+        contest_id: String,
+    }
+
+    let problem: ProblemResponse = serde_json::from_str(&body).unwrap();
+
+    assert_eq!(problem.id, "abc212_b");
     assert_eq!(problem.contest_id, "abc212");
 }
 
@@ -412,7 +444,7 @@ async fn test_multiple_contests_and_round_range_are_combined() {
 
     let problem: ProblemResponse = serde_json::from_str(&body).unwrap();
 
-    assert!(["abc212_a", "arc212_a"].contains(&problem.id.as_str()));
+    assert!(["abc212_a", "abc212_b", "arc212_a"].contains(&problem.id.as_str()));
     assert!(["abc212", "arc212"].contains(&problem.contest_id.as_str()));
     assert!(800.0 <= problem.difficulty && problem.difficulty <= 1000.0);
 }
@@ -421,7 +453,7 @@ async fn test_multiple_contests_and_round_range_are_combined() {
 async fn test_multiple_contests_with_difficulty_range_narrows_candidates() {
     let (status, body) = build_and_send(
         Method::GET,
-        "/?min=925&max=975&contest=abc,arc&contest_from=212&contest_to=212",
+        "/?min=950&max=975&contest=abc,arc&contest_from=212&contest_to=212",
     )
     .await;
     assert_eq!(status, StatusCode::OK);
