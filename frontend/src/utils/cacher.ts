@@ -11,12 +11,20 @@ export type CachedInput = {
 const rangeKey: string = 'lastDiff';
 const activityKey: string = 'pickActivity';
 const historyKey: string = "pickHistory";
-const maxHistoryEntries = 50;
+const historyExclusionKey: string = "pickHistoryExclusionEnabled";
+const pickHistoryVersion = 1;
+
+export const MAX_PICK_HISTORY_ENTRIES = 20;
 
 export type PickActivity = Record<string, number>;
 export type PickHistoryEntry = Problem & {
   entryId: string;
   pickedAt: string;
+};
+
+type PickHistoryStorage = {
+  version: typeof pickHistoryVersion;
+  entries: PickHistoryEntry[];
 };
 
 export const cacheInput = (input: CachedInput): void => {
@@ -105,6 +113,18 @@ const isPickHistoryEntry = (value: unknown): value is PickHistoryEntry => {
   );
 };
 
+const savePickHistory = (history: PickHistoryEntry[]): PickHistoryEntry[] => {
+  const entries = history.slice(0, MAX_PICK_HISTORY_ENTRIES);
+  const storedHistory: PickHistoryStorage = {
+    version: pickHistoryVersion,
+    entries,
+  };
+
+  localStorage.setItem(historyKey, JSON.stringify(storedHistory));
+
+  return entries;
+};
+
 export const loadPickHistory = (): PickHistoryEntry[] => {
   const data = localStorage.getItem(historyKey);
 
@@ -114,12 +134,31 @@ export const loadPickHistory = (): PickHistoryEntry[] => {
 
   try {
     const parsed: unknown = JSON.parse(data);
+    const isLegacyHistory = Array.isArray(parsed);
+    const storedEntries = isLegacyHistory
+      ? parsed
+      : typeof parsed === "object" &&
+          parsed !== null &&
+          "version" in parsed &&
+          parsed.version === pickHistoryVersion &&
+          "entries" in parsed &&
+          Array.isArray(parsed.entries)
+        ? parsed.entries
+        : null;
 
-    if (!Array.isArray(parsed)) {
+    if (storedEntries === null) {
       return [];
     }
 
-    return parsed.filter(isPickHistoryEntry).slice(0, maxHistoryEntries);
+    const history = storedEntries
+      .filter(isPickHistoryEntry)
+      .slice(0, MAX_PICK_HISTORY_ENTRIES);
+
+    if (isLegacyHistory) {
+      savePickHistory(history);
+    }
+
+    return history;
   } catch {
     return [];
   }
@@ -134,14 +173,9 @@ export const recordPickHistory = (
     entryId: `${date.getTime()}-${Math.random().toString(36).slice(2)}`,
     pickedAt: date.toISOString(),
   };
-  const nextHistory = [entry, ...loadPickHistory()].slice(
-    0,
-    maxHistoryEntries,
-  );
+  const nextHistory = [entry, ...loadPickHistory()];
 
-  localStorage.setItem(historyKey, JSON.stringify(nextHistory));
-
-  return nextHistory;
+  return savePickHistory(nextHistory);
 };
 
 export const removePickHistoryEntry = (entryId: string): PickHistoryEntry[] => {
@@ -149,13 +183,20 @@ export const removePickHistoryEntry = (entryId: string): PickHistoryEntry[] => {
     (entry) => entry.entryId !== entryId,
   );
 
-  localStorage.setItem(historyKey, JSON.stringify(nextHistory));
-
-  return nextHistory;
+  return savePickHistory(nextHistory);
 };
 
 export const clearPickHistory = (): PickHistoryEntry[] => {
   localStorage.removeItem(historyKey);
 
   return [];
+};
+
+export const loadHistoryExclusionEnabled = (): boolean =>
+  localStorage.getItem(historyExclusionKey) !== "false";
+
+export const saveHistoryExclusionEnabled = (enabled: boolean): boolean => {
+  localStorage.setItem(historyExclusionKey, String(enabled));
+
+  return enabled;
 };

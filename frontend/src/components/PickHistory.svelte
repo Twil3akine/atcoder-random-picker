@@ -1,5 +1,8 @@
 <script lang="ts">
-  import type { PickHistoryEntry } from "../utils/cacher";
+  import {
+    MAX_PICK_HISTORY_ENTRIES,
+    type PickHistoryEntry,
+  } from "../utils/cacher";
 
   type Props = {
     history: PickHistoryEntry[];
@@ -35,7 +38,7 @@
         Pick History
       </span>
       <span class="flex items-center gap-2 !text-sm text-base-foreground-muted">
-        {history.length} / 50
+        {history.length} / {MAX_PICK_HISTORY_ENTRIES}
         <span class="details-chevron" aria-hidden="true">›</span>
       </span>
     </summary>

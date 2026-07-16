@@ -3,7 +3,7 @@ use core::prelude::v1::derive;
 use hyper::{header, Body, Request, Response, StatusCode};
 use rand::seq::IteratorRandom;
 use serde::Serialize;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::convert::{From, Infallible};
 use std::iter::Iterator;
 use std::option::Option::None;
@@ -15,6 +15,7 @@ use std::vec::Vec;
 use crate::utils::api::{Problem, ProblemModel};
 
 const MIN_DIFFICULTY: f64 = 0.0;
+const MAX_EXCLUDED_PROBLEMS: usize = 20;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -111,6 +112,38 @@ fn parse_optional_u32(params: &HashMap<String, String>, key: &str) -> Result<Opt
         .map(Option::flatten)
 }
 
+fn parse_excluded_problem_ids(params: &HashMap<String, String>) -> Result<HashSet<String>, String> {
+    let excluded = params
+        .get("exclude")
+        .map(|value| {
+            value
+                .split(',')
+                .map(str::trim)
+                .filter(|id| !id.is_empty())
+                .map(ToString::to_string)
+                .collect::<HashSet<String>>()
+        })
+        .unwrap_or_default();
+
+    if excluded.len() > MAX_EXCLUDED_PROBLEMS {
+        return Err(format!(
+            "'exclude' cannot contain more than {} problem IDs.",
+            MAX_EXCLUDED_PROBLEMS
+        ));
+    }
+
+    if excluded.iter().any(|id| {
+        id.len() > 100
+            || !id.chars().all(|character| {
+                character.is_ascii_alphanumeric() || matches!(character, '_' | '-')
+            })
+    }) {
+        return Err("'exclude' contains an invalid problem ID.".to_string());
+    }
+
+    Ok(excluded)
+}
+
 fn log(now: DateTime<Local>, method: &str, path: &str, status: StatusCode) {
     println!(
         "[{}] {} {} -> {}",
@@ -137,7 +170,27 @@ fn with_cors_headers(mut res: Response<Body>) -> Response<Body> {
     res
 }
 
-fn standard_contest_number(contest_id: &str) -> Option<u32> {
+fn standard_contest_id(problem_id: &str) -> Option<&str> {
+    let (contest_id, _) = problem_id.rsplit_once('_')?;
+
+    for prefix in ["abc", "arc", "agc"] {
+        if let Some(number) = contest_id.strip_prefix(prefix) {
+            if number.parse::<u32>().is_ok() {
+                return Some(contest_id);
+            }
+        }
+    }
+
+    None
+}
+
+fn canonical_contest_id<'a>(problem_id: &'a str, contest_id: &'a str) -> &'a str {
+    standard_contest_id(problem_id).unwrap_or(contest_id)
+}
+
+fn standard_contest_number(problem_id: &str) -> Option<u32> {
+    let contest_id = standard_contest_id(problem_id)?;
+
     for prefix in ["abc", "arc", "agc"] {
         if let Some(number) = contest_id.strip_prefix(prefix) {
             return number.parse().ok();
@@ -195,6 +248,10 @@ pub async fn router(
                 Ok(contest_to) => contest_to,
                 Err(message) => return Ok(bad_request(&message)),
             };
+            let excluded_problem_ids = match parse_excluded_problem_ids(&params) {
+                Ok(excluded) => excluded,
+                Err(message) => return Ok(bad_request(&message)),
+            };
 
             if min > max {
                 return Ok(bad_request("'min' cannot be greater than 'max'."));
@@ -213,29 +270,29 @@ pub async fn router(
                 ));
             }
 
-            let mut rng = rand::thread_rng();
-
-            let selected = state
+            let candidates = state
                 .problems
                 .iter()
                 .filter(|p| {
+                    let contest_id = canonical_contest_id(&p.id, &p.contest_id);
+
                     if contest_filters.is_empty() {
                         return true;
                     }
                     contest_filters.iter().any(|filter| match filter {
-                        Contest::ABC => p.contest_id.starts_with("abc"),
-                        Contest::ARC => p.contest_id.starts_with("arc"),
-                        Contest::AGC => p.contest_id.starts_with("agc"),
+                        Contest::ABC => contest_id.starts_with("abc"),
+                        Contest::ARC => contest_id.starts_with("arc"),
+                        Contest::AGC => contest_id.starts_with("agc"),
                         Contest::Other => {
-                            !p.contest_id.starts_with("abc")
-                                && !p.contest_id.starts_with("arc")
-                                && !p.contest_id.starts_with("agc")
+                            !contest_id.starts_with("abc")
+                                && !contest_id.starts_with("arc")
+                                && !contest_id.starts_with("agc")
                         }
-                        Contest::Prefix(s) => p.contest_id.starts_with(s),
+                        Contest::Prefix(s) => contest_id.starts_with(s),
                     })
                 })
                 .filter(|p| {
-                    let Some(number) = standard_contest_number(&p.contest_id) else {
+                    let Some(number) = standard_contest_number(&p.id) else {
                         return contest_from.is_none() && contest_to.is_none();
                     };
 
@@ -249,19 +306,26 @@ pub async fn router(
                         .and_then(|m| match m.difficulty {
                             Some(diff) if min <= diff && diff <= max => Some(ProblemResponse {
                                 id: p.id.clone(),
-                                contest_id: p.contest_id.clone(),
+                                contest_id: canonical_contest_id(&p.id, &p.contest_id).to_string(),
                                 name: p.name.clone(),
                                 difficulty: Some(diff),
                             }),
                             None if allows_unknown_difficulty => Some(ProblemResponse {
                                 id: p.id.clone(),
-                                contest_id: p.contest_id.clone(),
+                                contest_id: canonical_contest_id(&p.id, &p.contest_id).to_string(),
                                 name: p.name.clone(),
                                 difficulty: None,
                             }),
                             _ => None,
                         })
                 })
+                .collect::<Vec<ProblemResponse>>();
+
+            let had_candidates_before_exclusion = !candidates.is_empty();
+            let mut rng = rand::thread_rng();
+            let selected = candidates
+                .into_iter()
+                .filter(|problem| !excluded_problem_ids.contains(&problem.id))
                 .choose(&mut rng);
 
             match selected {
@@ -270,8 +334,15 @@ pub async fn router(
                     Ok(with_cors_headers(Response::new(Body::from(body))))
                 }
                 None => {
+                    let message = if had_candidates_before_exclusion
+                        && !excluded_problem_ids.is_empty()
+                    {
+                        "履歴内の問題を除外すると、条件に一致する問題がありません。除外をOFFにするか、履歴を削除してください"
+                    } else {
+                        "指定Diff範囲に該当する問題がありませんでした"
+                    };
                     let error_body = serde_json::to_string(&ErrorResponse {
-                        message: "指定Diff範囲に該当する問題がありませんでした".to_string(),
+                        message: message.to_string(),
                     })
                     .unwrap();
 

@@ -18,10 +18,12 @@
     loadLastInput,
     loadPickActivity,
     loadPickHistory,
+    loadHistoryExclusionEnabled,
     recordPickActivity,
     recordPickHistory,
     removePickHistoryEntry,
     clearPickHistory,
+    saveHistoryExclusionEnabled,
     type PickActivity,
     type PickHistoryEntry,
   } from "./utils/cacher";
@@ -73,6 +75,12 @@
   let loading = $state<boolean>(false); // 問題を取得中か否か
   let pickActivity = $state<PickActivity>(loadPickActivity());
   let pickHistory = $state<PickHistoryEntry[]>(loadPickHistory());
+  let historyExclusionEnabled = $state<boolean>(
+    loadHistoryExclusionEnabled(),
+  );
+  let excludedHistoryIds = $derived(
+    Array.from(new Set(pickHistory.map((entry) => entry.id))),
+  );
   let selectedActivityYear = $state<number>(new Date().getFullYear());
   let activityYears = $derived(buildActivityYears(pickActivity));
   let activityCells = $derived(
@@ -113,6 +121,9 @@
       }
       if (contestToParam !== "") {
         params.set("contest_to", contestToParam);
+      }
+      if (historyExclusionEnabled && excludedHistoryIds.length > 0) {
+        params.set("exclude", excludedHistoryIds.join(","));
       }
 
       const API_CONTENT = `${API_URL}/?${params.toString()}`;
@@ -204,6 +215,10 @@
 
   const removeAllHistory = (): void => {
     pickHistory = clearPickHistory();
+  };
+
+  const updateHistoryExclusion = (enabled: boolean): void => {
+    historyExclusionEnabled = saveHistoryExclusionEnabled(enabled);
   };
 
   function getDateKey(date: Date): string {
@@ -375,6 +390,24 @@
         bind:value={contest_to}
       />
     </div>
+
+    <label
+      class="mt-3 flex min-h-11 cursor-pointer items-center gap-3 rounded-md border border-base-stroke-default px-3 py-2"
+    >
+      <input
+        type="checkbox"
+        class="size-4 shrink-0 accent-primary"
+        checked={historyExclusionEnabled}
+        onchange={(event) =>
+          updateHistoryExclusion(event.currentTarget.checked)}
+      />
+      <span class="!text-sm text-base-foreground-default">
+        履歴内の問題を除外
+      </span>
+      <span class="ml-auto shrink-0 !text-xs text-base-foreground-muted">
+        {excludedHistoryIds.length}件
+      </span>
+    </label>
 
     {#if !loading && result !== null}
       <div class="mt-4">

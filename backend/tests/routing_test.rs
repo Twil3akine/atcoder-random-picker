@@ -34,6 +34,12 @@ fn build_test_state() -> Arc<AppState> {
         },
     );
     problem_models.insert(
+        "abc212_b".to_string(),
+        ProblemModel {
+            difficulty: Some(925.0),
+        },
+    );
+    problem_models.insert(
         "abc213_a".to_string(),
         ProblemModel {
             difficulty: Some(850.0),
@@ -73,6 +79,11 @@ fn build_test_state() -> Arc<AppState> {
             id: "abc212_a".to_string(),
             contest_id: "abc212".to_string(),
             name: "A - Alloy".to_string(),
+        },
+        Problem {
+            id: "abc212_b".to_string(),
+            contest_id: "adt_all_20260615_2".to_string(),
+            name: "B - Weak Password".to_string(),
         },
         Problem {
             id: "abc213_a".to_string(),
@@ -141,6 +152,91 @@ async fn test_not_found_problem() {
 }
 
 #[tokio::test]
+async fn test_excluded_problem_is_not_selected() {
+    let (status, body) = build_and_send(
+        Method::GET,
+        "/?min=800&max=900&contest=abc&contest_from=212&contest_to=213&exclude=abc212_a",
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
+    #[derive(serde::Deserialize)]
+    struct ProblemResponse {
+        id: String,
+    }
+
+    let problem: ProblemResponse = serde_json::from_str(&body).unwrap();
+    assert_eq!(problem.id, "abc213_a");
+}
+
+#[tokio::test]
+async fn test_all_matching_problems_excluded_returns_specific_message() {
+    let (status, body) = build_and_send(
+        Method::GET,
+        "/?min=800&max=900&contest=abc&contest_from=212&contest_to=213&exclude=abc212_a,abc213_a",
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+
+    #[derive(serde::Deserialize)]
+    struct ErrorResponse {
+        message: String,
+    }
+
+    let error: ErrorResponse = serde_json::from_str(&body).unwrap();
+    assert_eq!(
+        error.message,
+        "履歴内の問題を除外すると、条件に一致する問題がありません。除外をOFFにするか、履歴を削除してください"
+    );
+}
+
+#[tokio::test]
+async fn test_empty_exclude_is_ignored() {
+    let (status, _) = build_and_send(Method::GET, "/?min=900&max=900&exclude=").await;
+    assert_eq!(status, StatusCode::OK);
+}
+
+#[tokio::test]
+async fn test_duplicate_excluded_problem_ids_count_once() {
+    let excluded = std::iter::repeat("abc212_a")
+        .take(21)
+        .collect::<Vec<_>>()
+        .join(",");
+    let path = format!("/?min=850&max=850&exclude={excluded}");
+    let (status, body) = build_and_send(Method::GET, &path).await;
+    assert_eq!(status, StatusCode::OK);
+
+    #[derive(serde::Deserialize)]
+    struct ProblemResponse {
+        id: String,
+    }
+
+    let problem: ProblemResponse = serde_json::from_str(&body).unwrap();
+    assert_eq!(problem.id, "abc213_a");
+}
+
+#[tokio::test]
+async fn test_more_than_twenty_excluded_problem_ids_is_bad_request() {
+    let excluded = (0..21)
+        .map(|index| format!("abc{index:03}_a"))
+        .collect::<Vec<_>>()
+        .join(",");
+    let path = format!("/?exclude={excluded}");
+    let (status, body) = build_and_send(Method::GET, &path).await;
+
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(body, "'exclude' cannot contain more than 20 problem IDs.");
+}
+
+#[tokio::test]
+async fn test_invalid_excluded_problem_id_is_bad_request() {
+    let (status, body) = build_and_send(Method::GET, "/?exclude=abc212%2Fa").await;
+
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(body, "'exclude' contains an invalid problem ID.");
+}
+
+#[tokio::test]
 async fn test_min_greater_than_max() {
     let (status, body) = build_and_send(Method::GET, "/?min=1500&max=500").await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
@@ -206,7 +302,7 @@ async fn test_random_range() {
 async fn test_contest_number_from() {
     let (status, body) = build_and_send(
         Method::GET,
-        "/?min=0&max=1500&contest=abc&contest_from=212&contest_to=212",
+        "/?min=900&max=900&contest=abc&contest_from=212&contest_to=212",
     )
     .await;
     assert_eq!(status, StatusCode::OK);
@@ -220,6 +316,27 @@ async fn test_contest_number_from() {
     let problem: ProblemResponse = serde_json::from_str(&body).unwrap();
 
     assert_eq!(problem.id, "abc212_a");
+    assert_eq!(problem.contest_id, "abc212");
+}
+
+#[tokio::test]
+async fn test_reused_problem_uses_its_canonical_standard_contest() {
+    let (status, body) = build_and_send(
+        Method::GET,
+        "/?min=925&max=925&contest=abc&contest_from=212&contest_to=212",
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
+    #[derive(serde::Deserialize)]
+    struct ProblemResponse {
+        id: String,
+        contest_id: String,
+    }
+
+    let problem: ProblemResponse = serde_json::from_str(&body).unwrap();
+
+    assert_eq!(problem.id, "abc212_b");
     assert_eq!(problem.contest_id, "abc212");
 }
 
@@ -327,7 +444,7 @@ async fn test_multiple_contests_and_round_range_are_combined() {
 
     let problem: ProblemResponse = serde_json::from_str(&body).unwrap();
 
-    assert!(["abc212_a", "arc212_a"].contains(&problem.id.as_str()));
+    assert!(["abc212_a", "abc212_b", "arc212_a"].contains(&problem.id.as_str()));
     assert!(["abc212", "arc212"].contains(&problem.contest_id.as_str()));
     assert!(800.0 <= problem.difficulty && problem.difficulty <= 1000.0);
 }
@@ -336,7 +453,7 @@ async fn test_multiple_contests_and_round_range_are_combined() {
 async fn test_multiple_contests_with_difficulty_range_narrows_candidates() {
     let (status, body) = build_and_send(
         Method::GET,
-        "/?min=925&max=975&contest=abc,arc&contest_from=212&contest_to=212",
+        "/?min=950&max=975&contest=abc,arc&contest_from=212&contest_to=212",
     )
     .await;
     assert_eq!(status, StatusCode::OK);
