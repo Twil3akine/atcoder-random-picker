@@ -1,0 +1,51 @@
+name: Backend
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+
+  pull_request:
+    branches:
+      - master
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run Backend tests
+        working-directory: backend
+        run: cargo test --locked
+
+      - name: Set up flyctl
+        if: ${{ github.ref == 'refs/heads/master' && github.event_name != 'pull_request' }}
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy to Fly.io
+        if: ${{ github.ref == 'refs/heads/master' && github.event_name != 'pull_request' }}
+        working-directory: backend
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: flyctl deploy --remote-only

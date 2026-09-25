@@ -2,12 +2,12 @@ name: Update AtCoder Problems JSON
 
 on:
   schedule:
-    # 毎週月曜 0:00 UTC（日本時間 9:00）
-    - cron: "0 0 * * 1"
-  workflow_dispatch: # 手動実行も可能
+    - cron: "17 0 * * 1"
+
+  workflow_dispatch:
 
 permissions:
-  contents: write # push 権限が必要
+  contents: write
 
 concurrency:
   group: update-atcoder-problems-json
@@ -15,45 +15,44 @@ concurrency:
 
 jobs:
   update-json:
+    if: ${{ github.ref == 'refs/heads/master' }}
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+        uses: actions/checkout@v7
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Validate fetch-json script
-        run: node --check json_fetch.mjs
+      - name: Update AtCoder data
         working-directory: backend/data
-
-      - name: Run fetch-json script
         run: node json_fetch.mjs
-        working-directory: backend/data
 
       - name: Run Backend tests
-        run: cargo test --verbose
         working-directory: backend
+        run: cargo test --locked
 
       - name: Commit changes if updated
         id: commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add backend/data/problems.json backend/data/problem-models.json
+
+          git add \
+            backend/data/problems.json \
+            backend/data/problem-models.json
+
           if git diff --cached --quiet; then
             echo "No changes in JSON files"
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
-            git commit -m "chore: update problems.json and problem-models.json"
+            git commit -m "chore: update AtCoder problem data"
             git push
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi

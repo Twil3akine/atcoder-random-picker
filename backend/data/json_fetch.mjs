@@ -1,56 +1,133 @@
-import { mkdir, writeFile, access } from "node:fs/promises";
-import { constants } from "node:fs";
+import { writeFile } from "node:fs/promises";
 
-const DATA_DIR = "."; // 保存先ディレクトリ
-const UA = "Mozilla/5.0 (atrp-updater; +https://example.com)";
+const UA =
+  "atcoder-random-picker-updater (+https://github.com/Twil3akine/atcoder-random-picker)";
 
 const endpoints = {
   problems: "https://kenkoooo.com/atcoder/resources/problems.json",
-  problemModels: "https://kenkoooo.com/atcoder/resources/problem-models.json",
+  problemModels:
+    "https://kenkoooo.com/atcoder/resources/problem-models.json",
 };
 
-async function ensureDir(dir) {
-  try {
-    await access(dir, constants.F_OK);
-  } catch {
-    await mkdir(dir, { recursive: true });
+async function downloadJson(url) {
+  const response = await fetch(url, {
+    headers: {
+      "User-Agent": UA,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status} for ${url}`);
   }
+
+  return response.json();
 }
 
-async function downloadJson(url) {
-  const res = await fetch(url, { headers: { "User-Agent": UA } });
-  if (!res.ok) {
-    throw new Error(`HTTP ${res.status} for ${url}`);
+function normalizeProblems(raw) {
+  if (!Array.isArray(raw) || raw.length === 0) {
+    throw new Error("problems.json must be a non-empty array");
   }
 
-  return res.json();
+  const seen = new Set();
+
+  return raw.map((problem, index) => {
+    if (
+      typeof problem !== "object" ||
+      problem === null ||
+      Array.isArray(problem)
+    ) {
+      throw new Error(`invalid problem at index ${index}`);
+    }
+
+    const { id, contest_id, name } = problem;
+
+    for (const [key, value] of Object.entries({
+      id,
+      contest_id,
+      name,
+    })) {
+      if (typeof value !== "string" || value.trim() === "") {
+        throw new Error(
+          `problem at index ${index} has invalid ${key}`,
+        );
+      }
+    }
+
+    if (seen.has(id)) {
+      throw new Error(`duplicated problem id: ${id}`);
+    }
+
+    seen.add(id);
+
+    return {
+      id,
+      contest_id,
+      name,
+    };
+  });
+}
+
+function normalizeProblemModels(problems, raw) {
+  if (
+    typeof raw !== "object" ||
+    raw === null ||
+    Array.isArray(raw)
+  ) {
+    throw new Error("problem-models.json must be an object");
+  }
+
+  return Object.fromEntries(
+    problems.map(({ id }) => {
+      const model = raw[id];
+
+      if (model === undefined) {
+        return [id, { difficulty: null }];
+      }
+
+      if (
+        typeof model !== "object" ||
+        model === null ||
+        Array.isArray(model)
+      ) {
+        throw new Error(`invalid problem model: ${id}`);
+      }
+
+      const difficulty = model.difficulty ?? null;
+
+      if (
+        difficulty !== null &&
+        (typeof difficulty !== "number" ||
+          !Number.isFinite(difficulty))
+      ) {
+        throw new Error(`invalid difficulty: ${id}`);
+      }
+
+      return [
+        id,
+        {
+          difficulty,
+        },
+      ];
+    }),
+  );
 }
 
 async function writeJson(filename, data) {
-  const buf = Buffer.from(JSON.stringify(data));
-  await writeFile(`${DATA_DIR}/${filename}`, buf);
-  console.log(`Saved (processed): ${DATA_DIR}/${filename}`);
+  await writeFile(filename, `${JSON.stringify(data)}\n`);
 }
 
-(async () => {
-  await ensureDir(DATA_DIR);
+const [problemsData, problemModelsData] = await Promise.all([
+  downloadJson(endpoints.problems),
+  downloadJson(endpoints.problemModels),
+]);
 
-  const problemsData = await downloadJson(endpoints.problems);
-  const problemModelsData = await downloadJson(endpoints.problemModels);
+const problems = normalizeProblems(problemsData);
+const problemModels = normalizeProblemModels(
+  problems,
+  problemModelsData,
+);
 
-  const problems = problemsData.map(({ id, contest_id, name }) => ({
-    id,
-    contest_id,
-    name,
-  }));
+await writeJson("problems.json", problems);
+await writeJson("problem-models.json", problemModels);
 
-  const problemModels = Object.fromEntries(
-    problems.map(({ id }) => [
-      id,
-      { difficulty: problemModelsData[id]?.difficulty ?? null },
-    ])
-  );
-
-  await writeJson("problems.json", problems);
-  await writeJson("problem-models.json", problemModels);
-})();
+console.log(`Updated ${problems.length} problems`);
