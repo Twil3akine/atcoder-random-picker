@@ -9,10 +9,6 @@ on:
 permissions:
   contents: write
 
-concurrency:
-  group: update-atcoder-problems-json
-  cancel-in-progress: false
-
 jobs:
   update-json:
     if: ${{ github.ref == 'refs/heads/master' }}
